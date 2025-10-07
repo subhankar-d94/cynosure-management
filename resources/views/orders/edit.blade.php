@@ -63,9 +63,8 @@
                                     <label for="status" class="form-label">Order Status</label>
                                     <select class="form-select" id="status" name="status">
                                         <option value="pending" {{ ($order->status ?? 'pending') === 'pending' ? 'selected' : '' }}>Pending</option>
-                                        <option value="processing" {{ ($order->status ?? 'pending') === 'processing' ? 'selected' : '' }}>Processing</option>
-                                        <option value="shipped" {{ ($order->status ?? 'pending') === 'shipped' ? 'selected' : '' }}>Shipped</option>
-                                        <option value="delivered" {{ ($order->status ?? 'pending') === 'delivered' ? 'selected' : '' }}>Delivered</option>
+                                        <option value="confirmed" {{ ($order->status ?? 'pending') === 'confirmed' ? 'selected' : '' }}>Confirmed</option>
+                                        <option value="in_progress" {{ ($order->status ?? 'pending') === 'in_progress' ? 'selected' : '' }}>In Progress</option>
                                         <option value="completed" {{ ($order->status ?? 'pending') === 'completed' ? 'selected' : '' }}>Completed</option>
                                         <option value="cancelled" {{ ($order->status ?? 'pending') === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                                     </select>
@@ -158,10 +157,10 @@
                                                 @foreach($order->items as $index => $item)
                                                 <tr data-item="{{ $index }}">
                                                     <td>
-                                                        {{ $item->product->name ?? 'Sample Product' }}
+                                                        {{ $item->product_name ?? 'Unknown Product' }}
                                                         <input type="hidden" name="items[{{ $index }}][id]" value="{{ $item->id }}">
                                                         <input type="hidden" name="items[{{ $index }}][product_id]" value="{{ $item->product_id }}">
-                                                        <input type="hidden" name="items[{{ $index }}][product_name]" value="{{ $item->product->name ?? 'Sample Product' }}">
+                                                        <input type="hidden" name="items[{{ $index }}][product_name]" value="{{ $item->product_name ?? 'Unknown Product' }}">
                                                     </td>
                                                     <td>
                                                         <input type="number" class="form-control item-quantity" name="items[{{ $index }}][quantity]"
@@ -169,15 +168,15 @@
                                                     </td>
                                                     <td>
                                                         <input type="number" step="0.01" class="form-control item-price" name="items[{{ $index }}][price]"
-                                                               value="{{ $item->price ?? 599.99 }}" min="0" required>
+                                                               value="{{ $item->unit_price ?? 0 }}" min="0" required>
                                                     </td>
                                                     <td>
                                                         <input type="number" step="0.01" class="form-control item-discount" name="items[{{ $index }}][discount]"
-                                                               value="{{ $item->discount ?? 0 }}" min="0">
+                                                               value="0" min="0">
                                                     </td>
                                                     <td>
-                                                        <span class="item-total">${{ number_format($item->total ?? 599.99, 2) }}</span>
-                                                        <input type="hidden" class="item-total-input" name="items[{{ $index }}][total]" value="{{ $item->total ?? 599.99 }}">
+                                                        <span class="item-total">₹{{ number_format($item->subtotal ?? 0, 2) }}</span>
+                                                        <input type="hidden" class="item-total-input" name="items[{{ $index }}][total]" value="{{ $item->subtotal ?? 0 }}">
                                                     </td>
                                                     <td>
                                                         <button type="button" class="btn btn-sm btn-danger remove-item">
@@ -189,25 +188,25 @@
                                             @else
                                                 <tr data-item="0">
                                                     <td>
-                                                        Sample Product A
-                                                        <input type="hidden" name="items[0][product_id]" value="1">
-                                                        <input type="hidden" name="items[0][product_name]" value="Sample Product A">
+                                                        Click "Add Item" to add products
+                                                        <input type="hidden" name="items[0][product_id]" value="">
+                                                        <input type="hidden" name="items[0][product_name]" value="">
                                                     </td>
                                                     <td>
                                                         <input type="number" class="form-control item-quantity" name="items[0][quantity]"
-                                                               value="2" min="1" required>
+                                                               value="1" min="1" required>
                                                     </td>
                                                     <td>
                                                         <input type="number" step="0.01" class="form-control item-price" name="items[0][price]"
-                                                               value="599.99" min="0" required>
+                                                               value="0" min="0" required>
                                                     </td>
                                                     <td>
                                                         <input type="number" step="0.01" class="form-control item-discount" name="items[0][discount]"
                                                                value="0" min="0">
                                                     </td>
                                                     <td>
-                                                        <span class="item-total">$1,199.98</span>
-                                                        <input type="hidden" class="item-total-input" name="items[0][total]" value="1199.98">
+                                                        <span class="item-total">₹0.00</span>
+                                                        <input type="hidden" class="item-total-input" name="items[0][total]" value="0">
                                                     </td>
                                                     <td>
                                                         <button type="button" class="btn btn-sm btn-danger remove-item">
@@ -237,27 +236,22 @@
                                         <h6 class="card-title">Order Summary</h6>
                                         <div class="d-flex justify-content-between">
                                             <span>Subtotal:</span>
-                                            <span id="subtotal">${{ number_format($order->subtotal ?? 1199.98, 2) }}</span>
+                                            <span id="subtotal">₹{{ number_format($order->total_amount ?? 0, 2) }}</span>
                                         </div>
                                         <div class="d-flex justify-content-between">
-                                            <span>Discount:</span>
-                                            <span id="total_discount">${{ number_format($order->discount ?? 0, 2) }}</span>
-                                        </div>
-                                        <div class="d-flex justify-content-between">
-                                            <span>Tax:</span>
-                                            <span id="tax_amount">${{ number_format($order->tax ?? 95.99, 2) }}</span>
+                                            <span>Delivery Charges:</span>
+                                            <span id="delivery_charges">₹{{ number_format($order->delivery_charges ?? 0, 2) }}</span>
                                         </div>
                                         <hr>
                                         <div class="d-flex justify-content-between fw-bold">
                                             <span>Total:</span>
-                                            <span id="grand_total">${{ number_format($order->total ?? 1295.97, 2) }}</span>
+                                            <span id="grand_total">₹{{ number_format(($order->total_amount ?? 0) + ($order->delivery_charges ?? 0), 2) }}</span>
                                         </div>
 
                                         <!-- Hidden fields for totals -->
-                                        <input type="hidden" id="subtotal_input" name="subtotal" value="{{ $order->subtotal ?? 1199.98 }}">
-                                        <input type="hidden" id="discount_input" name="discount" value="{{ $order->discount ?? 0 }}">
-                                        <input type="hidden" id="tax_input" name="tax" value="{{ $order->tax ?? 95.99 }}">
-                                        <input type="hidden" id="total_input" name="total" value="{{ $order->total ?? 1295.97 }}">
+                                        <input type="hidden" id="subtotal_input" name="subtotal" value="{{ $order->total_amount ?? 0 }}">
+                                        <input type="hidden" id="delivery_charges_input" name="delivery_charges" value="{{ $order->delivery_charges ?? 0 }}">
+                                        <input type="hidden" id="total_input" name="total" value="{{ ($order->total_amount ?? 0) + ($order->delivery_charges ?? 0) }}">
                                     </div>
                                 </div>
                             </div>
@@ -272,11 +266,12 @@
                                 <div class="mb-3">
                                     <label for="payment_method" class="form-label">Payment Method</label>
                                     <select class="form-select" id="payment_method" name="payment_method">
-                                        <option value="cash" {{ ($order->payment_method ?? 'cash') === 'cash' ? 'selected' : '' }}>Cash</option>
-                                        <option value="card" {{ ($order->payment_method ?? 'cash') === 'card' ? 'selected' : '' }}>Credit/Debit Card</option>
-                                        <option value="bank_transfer" {{ ($order->payment_method ?? 'cash') === 'bank_transfer' ? 'selected' : '' }}>Bank Transfer</option>
-                                        <option value="check" {{ ($order->payment_method ?? 'cash') === 'check' ? 'selected' : '' }}>Check</option>
-                                        <option value="credit" {{ ($order->payment_method ?? 'cash') === 'credit' ? 'selected' : '' }}>Store Credit</option>
+                                        <option value="">Select Payment Method</option>
+                                        <option value="cash" {{ ($order->payment_method ?? '') === 'cash' ? 'selected' : '' }}>Cash</option>
+                                        <option value="card" {{ ($order->payment_method ?? '') === 'card' ? 'selected' : '' }}>Credit/Debit Card</option>
+                                        <option value="upi" {{ ($order->payment_method ?? '') === 'upi' ? 'selected' : '' }}>UPI</option>
+                                        <option value="bank_transfer" {{ ($order->payment_method ?? '') === 'bank_transfer' ? 'selected' : '' }}>Bank Transfer</option>
+                                        <option value="check" {{ ($order->payment_method ?? '') === 'check' ? 'selected' : '' }}>Check</option>
                                     </select>
                                 </div>
                             </div>
@@ -385,7 +380,7 @@
 <script>
 $(document).ready(function() {
     let itemCounter = {{ isset($order->items) ? $order->items->count() : 1 }};
-    const taxRate = 0.08; // 8% tax rate
+    // No tax rate as per user requirement
 
     // Customer type change handler
     $('#customer_type').change(function() {
@@ -433,12 +428,12 @@ $(document).ready(function() {
                     <tr>
                         <td>${product.name}</td>
                         <td>${product.sku}</td>
-                        <td>$${parseFloat(product.price).toFixed(2)}</td>
-                        <td>${product.stock_quantity}</td>
+                        <td>₹${parseFloat(product.base_price || product.price || 0).toFixed(2)}</td>
+                        <td>Available</td>
                         <td>
                             <button type="button" class="btn btn-sm btn-primary select-product"
                                     data-id="${product.id}" data-name="${product.name}"
-                                    data-price="${product.price}" data-stock="${product.stock_quantity}">
+                                    data-price="${product.base_price || product.price || 0}" data-stock="100">
                                 Select
                             </button>
                         </td>
@@ -492,7 +487,7 @@ $(document).ready(function() {
                            value="0" min="0">
                 </td>
                 <td>
-                    <span class="item-total">$${product.price.toFixed(2)}</span>
+                    <span class="item-total">₹${product.price.toFixed(2)}</span>
                     <input type="hidden" class="item-total-input" name="items[${itemCounter}][total]" value="${product.price}">
                 </td>
                 <td>
@@ -521,7 +516,7 @@ $(document).ready(function() {
         const discount = parseFloat(row.find('.item-discount').val()) || 0;
 
         const total = (quantity * price) - discount;
-        row.find('.item-total').text(`$${total.toFixed(2)}`);
+        row.find('.item-total').text(`₹${total.toFixed(2)}`);
         row.find('.item-total-input').val(total);
 
         calculateTotals();
@@ -530,27 +525,18 @@ $(document).ready(function() {
     // Calculate order totals
     function calculateTotals() {
         let subtotal = 0;
-        let totalDiscount = 0;
 
         $('.item-total-input').each(function() {
             subtotal += parseFloat($(this).val()) || 0;
         });
 
-        $('.item-discount').each(function() {
-            totalDiscount += parseFloat($(this).val()) || 0;
-        });
+        const deliveryCharges = parseFloat($('#delivery_charges_input').val()) || 0;
+        const grandTotal = subtotal + deliveryCharges;
 
-        const tax = subtotal * taxRate;
-        const grandTotal = subtotal + tax;
-
-        $('#subtotal').text(`$${subtotal.toFixed(2)}`);
-        $('#total_discount').text(`$${totalDiscount.toFixed(2)}`);
-        $('#tax_amount').text(`$${tax.toFixed(2)}`);
-        $('#grand_total').text(`$${grandTotal.toFixed(2)}`);
+        $('#subtotal').text(`₹${subtotal.toFixed(2)}`);
+        $('#grand_total').text(`₹${grandTotal.toFixed(2)}`);
 
         $('#subtotal_input').val(subtotal);
-        $('#discount_input').val(totalDiscount);
-        $('#tax_input').val(tax);
         $('#total_input').val(grandTotal);
     }
 
@@ -610,7 +596,7 @@ $(document).ready(function() {
                     <tr>
                         <td>${productName}</td>
                         <td>${quantity}</td>
-                        <td>$${parseFloat(price).toFixed(2)}</td>
+                        <td>₹${parseFloat(price).toFixed(2)}</td>
                         <td>${total}</td>
                     </tr>
                 `;

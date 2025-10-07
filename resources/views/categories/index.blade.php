@@ -209,7 +209,7 @@
 </div>
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
 let currentPage = 1;
 let isHierarchyView = false;
@@ -665,4 +665,4 @@ function debounce(func, wait) {
     };
 }
 </script>
-@endsection
+@endpush

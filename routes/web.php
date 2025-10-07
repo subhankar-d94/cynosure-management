@@ -149,6 +149,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/{order}/process', [OrderController::class, 'process'])->name('process');
         Route::post('/{order}/complete', [OrderController::class, 'complete'])->name('complete');
         Route::post('/{order}/cancel', [OrderController::class, 'cancel'])->name('cancel');
+        Route::post('/{order}/record-payment', [OrderController::class, 'recordPayment'])->name('record-payment');
+        Route::post('/{order}/email', [OrderController::class, 'email'])->name('email');
+        Route::post('/{order}/add-tracking', [OrderController::class, 'addTracking'])->name('add-tracking');
+        Route::post('/{order}/notify', [OrderController::class, 'notify'])->name('notify');
         Route::get('/{order}/invoice', [OrderController::class, 'generateInvoice'])->name('invoice');
         Route::get('/{order}/print', [OrderController::class, 'print'])->name('print');
         Route::post('/{order}/duplicate', [OrderController::class, 'duplicate'])->name('duplicate');

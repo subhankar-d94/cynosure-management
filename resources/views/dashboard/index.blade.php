@@ -301,7 +301,7 @@
 </div>
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
 // Chart configurations
 let salesChart, orderStatusChart;
@@ -563,4 +563,4 @@ function processOrder(orderId) {
     }
 }
 </script>
-@endsection
+@endpush

@@ -1,5 +1,15 @@
 @extends('layouts.app')
 
+@php
+    function formatDate($date, $default = 'N/A') {
+        if (!$date) return $default;
+        if (is_string($date)) {
+            return \Carbon\Carbon::parse($date)->format('M d, Y h:i A');
+        }
+        return $date->format('M d, Y h:i A');
+    }
+@endphp
+
 @section('content')
 <div class="container-fluid">
     <div class="row">
@@ -9,7 +19,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <div>
                         <h3 class="card-title mb-0">Order #{{ $order->order_number ?? 'ORD-2024-12345' }}</h3>
-                        <small class="text-muted">Created on {{ $order->created_at->format('M d, Y h:i A') ?? 'Jan 15, 2024 10:30 AM' }}</small>
+                        <small class="text-muted">Created on {{ formatDate($order->created_at, 'Jan 15, 2024 10:30 AM') }}</small>
                     </div>
                     <div class="d-flex gap-2">
                         @if(($order->status ?? 'pending') !== 'cancelled')
@@ -317,14 +327,14 @@
                                     <div class="timeline-marker bg-success"></div>
                                     <div class="timeline-content">
                                         <h6 class="mb-1">Order Created</h6>
-                                        <small class="text-muted">{{ $order->created_at->format('M d, Y h:i A') ?? 'Jan 15, 2024 10:30 AM' }}</small>
+                                        <small class="text-muted">{{ formatDate($order->created_at, 'Jan 15, 2024 10:30 AM') }}</small>
                                     </div>
                                 </div>
                                 <div class="timeline-item">
                                     <div class="timeline-marker bg-primary"></div>
                                     <div class="timeline-content">
                                         <h6 class="mb-1">Payment Received</h6>
-                                        <small class="text-muted">{{ $order->updated_at->format('M d, Y h:i A') ?? 'Jan 15, 2024 10:35 AM' }}</small>
+                                        <small class="text-muted">{{ formatDate($order->updated_at, 'Jan 15, 2024 10:35 AM') }}</small>
                                     </div>
                                 </div>
                                 <div class="timeline-item">

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
+use App\Models\Order;
 
 class OrderController extends Controller
 {
@@ -41,10 +42,16 @@ class OrderController extends Controller
     public function store(Request $request)
     {
         try {
-            $validator = Validator::make($request->all(), [
+            // Remove customer name/phone fields if customer_type is 'existing'
+            $data = $request->all();
+            if (isset($data['customer_type']) && $data['customer_type'] === 'existing') {
+                unset($data['customer_name'], $data['customer_phone']);
+            }
+
+            $validator = Validator::make($data, [
                 'order_date' => 'required|date',
                 'customer_type' => 'required|in:existing,walk-in,new',
-                'customer_id' => 'nullable|exists:customers,id',
+                'customer_id' => 'required_if:customer_type,existing|exists:customers,id',
                 'customer_name' => 'required_if:customer_type,walk-in,new|string|max:255',
                 'customer_phone' => 'required_if:customer_type,walk-in,new|string|max:20',
                 'customer_email' => 'nullable|email|max:255',
@@ -67,24 +74,59 @@ class OrderController extends Controller
 
             DB::beginTransaction();
 
+            // Handle customer creation for new/walk-in customers
+            $customerId = null;
+            if ($request->customer_type === 'existing' && $request->customer_id) {
+                $customerId = $request->customer_id;
+            } else {
+                // Create new customer record for walk-in or new customers
+                $customerData = [
+                    'name' => $request->customer_name,
+                    'phone' => $request->customer_phone,
+                    'email' => $request->customer_email,
+                    'customer_type' => $request->customer_type === 'new' ? 'individual' : 'walk-in',
+                    'status' => 'active',
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ];
+
+                $customerId = DB::table('customers')->insertGetId($customerData);
+            }
+
+            // Generate unique order number
+            $orderNumber = Order::generateOrderNumber();
+
             // Create order
             $orderData = [
+                'order_number' => $orderNumber,
+                'customer_id' => $customerId,
                 'order_date' => $request->order_date,
-                'status' => 'pending',
+                'status' => Order::STATUS_PENDING,
+                'priority' => $request->priority ?? 'medium',
+                'subtotal' => $request->subtotal ?? 0,
+                'discount' => $request->discount ?? 0,
+                'tax' => $request->tax ?? 0,
                 'total_amount' => $request->total ?? $request->subtotal ?? 0,
                 'delivery_charges' => $request->delivery_charges ?? 0,
-                'delivery_date' => $request->expected_delivery,
+                'expected_delivery' => $request->expected_delivery,
+                'payment_method' => $request->payment_method,
+                'payment_status' => $request->payment_status ?? Order::PAYMENT_STATUS_PENDING,
+                'paid_amount' => $request->paid_amount ?? 0,
                 'notes' => $request->notes,
                 'created_at' => now(),
                 'updated_at' => now()
             ];
 
-            // Handle customer data
+            // Handle customer data for store method
             if ($request->customer_type === 'existing' && $request->customer_id) {
                 $orderData['customer_id'] = $request->customer_id;
+            } else {
+                $orderData['customer_id'] = null;
+                $orderData['customer_name'] = $request->customer_name;
+                $orderData['customer_phone'] = $request->customer_phone;
+                $orderData['customer_email'] = $request->customer_email;
+                $orderData['customer_address'] = $request->customer_address;
             }
-            // Note: For walk-in customers, we'll need to create a customer record first
-            // since the orders table only has customer_id foreign key
 
             $orderId = DB::table('orders')->insertGetId($orderData);
 
@@ -95,37 +137,39 @@ class OrderController extends Controller
                 DB::table('order_items')->insert([
                     'order_id' => $orderId,
                     'product_id' => $item['product_id'],
-                    'product_name' => $item['product_name'],
+                    'product_name' => $item['product_name'] ?? 'Product',
                     'quantity' => $item['quantity'],
+                    'unit_price' => $item['price'],
                     'price' => $item['price'],
                     'discount' => $item['discount'] ?? 0,
+                    'customization_details' => $item['customization_details'] ?? null,
+                    'subtotal' => $itemTotal,
                     'total' => $itemTotal,
                     'created_at' => now(),
                     'updated_at' => now()
                 ]);
 
-                // Update product stock if exists
-                DB::table('products')
-                    ->where('id', $item['product_id'])
-                    ->decrement('stock_quantity', $item['quantity']);
+                // Note: Stock management handled separately in inventory table
+                // Update inventory instead of products table
+                DB::table('inventories')->where('product_id', $item['product_id'])->decrement('quantity_in_stock', $item['quantity']);
             }
 
             DB::commit();
 
             $action = $request->input('action', 'save');
             if ($action === 'save_and_process') {
-                // Update status to processing
+                // Update status to in_progress
                 DB::table('orders')->where('id', $orderId)->update([
-                    'status' => 'processing',
+                    'status' => Order::STATUS_IN_PROGRESS,
                     'updated_at' => now()
                 ]);
 
                 return redirect()->route('orders.show', $orderId)
-                    ->with('success', 'Order created and moved to processing!');
+                    ->with('success', "Order {$orderNumber} created and moved to in-progress!");
             }
 
             return redirect()->route('orders.show', $orderId)
-                ->with('success', 'Order created successfully!');
+                ->with('success', "Order {$orderNumber} created successfully!");
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -181,7 +225,7 @@ class OrderController extends Controller
                 'items.*.price' => 'required|numeric|min:0',
                 'subtotal' => 'required|numeric|min:0',
                 'total' => 'required|numeric|min:0',
-                'status' => 'required|in:pending,processing,shipped,delivered,completed,cancelled',
+                'status' => 'required|in:' . Order::getStatusesForValidation(),
                 'payment_status' => 'required|in:pending,partial,paid,failed'
             ]);
 
@@ -197,9 +241,9 @@ class OrderController extends Controller
 
             // Restore stock for current items
             foreach ($currentItems as $item) {
-                DB::table('products')
-                    ->where('id', $item->product_id)
-                    ->increment('stock_quantity', $item->quantity);
+                DB::table('inventories')
+                    ->where('product_id', $item->product_id)
+                    ->increment('quantity_in_stock', $item->quantity);
             }
 
             // Update order
@@ -208,10 +252,10 @@ class OrderController extends Controller
                 'expected_delivery' => $request->expected_delivery,
                 'priority' => $request->priority ?? 'medium',
                 'status' => $request->status,
-                'subtotal' => $request->subtotal,
+                'subtotal' => $request->subtotal ?? 0,
                 'discount' => $request->discount ?? 0,
-                'tax' => $request->tax,
-                'total' => $request->total,
+                'tax' => $request->tax ?? 0,
+                'total_amount' => $request->total,
                 'payment_method' => $request->payment_method,
                 'payment_status' => $request->payment_status,
                 'paid_amount' => $request->paid_amount ?? 0,
@@ -248,17 +292,20 @@ class OrderController extends Controller
                     'product_id' => $item['product_id'],
                     'product_name' => $item['product_name'] ?? 'Product',
                     'quantity' => $item['quantity'],
+                    'unit_price' => $item['price'],
                     'price' => $item['price'],
                     'discount' => $item['discount'] ?? 0,
+                    'customization_details' => $item['customization_details'] ?? null,
+                    'subtotal' => $itemTotal,
                     'total' => $itemTotal,
                     'created_at' => now(),
                     'updated_at' => now()
                 ]);
 
-                // Update product stock
-                DB::table('products')
-                    ->where('id', $item['product_id'])
-                    ->decrement('stock_quantity', $item['quantity']);
+                // Update inventory stock
+                DB::table('inventories')
+                    ->where('product_id', $item['product_id'])
+                    ->decrement('quantity_in_stock', $item['quantity']);
             }
 
             DB::commit();
@@ -290,9 +337,9 @@ class OrderController extends Controller
             $orderItems = DB::table('order_items')->where('order_id', $id)->get();
 
             foreach ($orderItems as $item) {
-                DB::table('products')
-                    ->where('id', $item->product_id)
-                    ->increment('stock_quantity', $item->quantity);
+                DB::table('inventories')
+                    ->where('product_id', $item->product_id)
+                    ->increment('quantity_in_stock', $item->quantity);
             }
 
             // Delete order items first
@@ -317,7 +364,7 @@ class OrderController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'status' => 'required|in:pending,processing,shipped,delivered,completed,cancelled',
+                'status' => 'required|in:' . Order::getStatusesForValidation(),
                 'note' => 'nullable|string'
             ]);
 
@@ -422,9 +469,9 @@ class OrderController extends Controller
             $orderItems = DB::table('order_items')->where('order_id', $id)->get();
 
             foreach ($orderItems as $item) {
-                DB::table('products')
-                    ->where('id', $item->product_id)
-                    ->increment('stock_quantity', $item->quantity);
+                DB::table('inventories')
+                    ->where('product_id', $item->product_id)
+                    ->increment('quantity_in_stock', $item->quantity);
             }
 
             DB::table('orders')->where('id', $id)->update([
@@ -450,7 +497,7 @@ class OrderController extends Controller
                 'action' => 'required|in:delete,update_status,export',
                 'order_ids' => 'required|array|min:1',
                 'order_ids.*' => 'integer|exists:orders,id',
-                'status' => 'required_if:action,update_status|in:pending,processing,shipped,delivered,completed,cancelled'
+                'status' => 'required_if:action,update_status|in:' . Order::getStatusesForValidation()
             ]);
 
             if ($validator->fails()) {
@@ -467,9 +514,9 @@ class OrderController extends Controller
                     // Restore stock for all items
                     $orderItems = DB::table('order_items')->whereIn('order_id', $orderIds)->get();
                     foreach ($orderItems as $item) {
-                        DB::table('products')
-                            ->where('id', $item->product_id)
-                            ->increment('stock_quantity', $item->quantity);
+                        DB::table('inventories')
+                            ->where('product_id', $item->product_id)
+                            ->increment('quantity_in_stock', $item->quantity);
                     }
 
                     DB::table('order_items')->whereIn('order_id', $orderIds)->delete();
@@ -510,33 +557,27 @@ class OrderController extends Controller
                 ->leftJoin('customers', 'orders.customer_id', '=', 'customers.id')
                 ->select([
                     'orders.id',
-                    'orders.id as order_number',
+                    'orders.order_number',
                     'orders.order_date',
                     'orders.status',
-                    'orders.status as priority',
-                    'orders.total_amount as total',
-                    'orders.status as payment_status',
+                    'orders.payment_status',
+                    'orders.payment_method',
+                    'orders.paid_amount',
+                    'orders.total_amount',
                     'orders.created_at',
                     'customers.name as customer_name',
                     'customers.phone as customer_phone',
-                    DB::raw('NULL as walk_in_name'),
-                    DB::raw('NULL as walk_in_phone')
+                    'customers.email as customer_email'
                 ]);
 
             // Apply filters
-            if ($request->has('status') && $request->status !== '') {
+            if ($request->has('status') && $request->status !== '' && $request->status !== null) {
                 $query->where('orders.status', $request->status);
             }
 
-            // Skip priority filter as column doesn't exist
-            // if ($request->has('priority') && $request->priority !== '') {
-            //     $query->where('orders.priority', $request->priority);
-            // }
-
-            // Skip payment_status filter as column doesn't exist
-            // if ($request->has('payment_status') && $request->payment_status !== '') {
-            //     $query->where('orders.payment_status', $request->payment_status);
-            // }
+            if ($request->has('payment_status') && $request->payment_status !== '' && $request->payment_status !== null) {
+                $query->where('orders.payment_status', $request->payment_status);
+            }
 
             if ($request->has('date_from') && $request->date_from) {
                 $query->where('orders.order_date', '>=', $request->date_from);
@@ -546,10 +587,11 @@ class OrderController extends Controller
                 $query->where('orders.order_date', '<=', $request->date_to);
             }
 
-            if ($request->has('search') && $request->search) {
+            if ($request->has('search') && $request->search && $request->search !== 'null') {
                 $search = $request->search;
-                $query->where(function($q) use ($search) {
-                    $q->where('orders.id', 'LIKE', "%{$search}%")
+                $query->where(function ($q) use ($search) {
+                    $q->where('orders.order_number', 'LIKE', "%{$search}%")
+                      ->orWhere('orders.id', 'LIKE', "%{$search}%")
                       ->orWhere('customers.name', 'LIKE', "%{$search}%")
                       ->orWhere('customers.phone', 'LIKE', "%{$search}%");
                 });
@@ -574,19 +616,54 @@ class OrderController extends Controller
             $offset = ($page - 1) * $perPage;
 
             $total = $query->count();
-            $orders = $query->offset($offset)->limit($perPage)->get();
+            $ordersData = $query->offset($offset)->limit($perPage)->get();
+
+            // Transform data to match frontend expectations
+            $orders = $ordersData->map(function ($order) {
+                // Get items count for this order
+                $itemsCount = DB::table('order_items')->where('order_id', $order->id)->sum('quantity');
+
+                return [
+                    'id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'order_date' => $order->order_date,
+                    'status' => $order->status,
+                    'payment_status' => $order->payment_status,
+                    'payment_method' => $order->payment_method,
+                    'paid_amount' => $order->paid_amount,
+                    'total_amount' => $order->total_amount,
+                    'created_at' => $order->created_at,
+                    'items_count' => $itemsCount,
+                    'customer' => $order->customer_name ? [
+                        'name' => $order->customer_name,
+                        'email' => $order->customer_email,
+                        'phone' => $order->customer_phone
+                    ] : null,
+                    'customer_name' => $order->customer_name,
+                    'customer_email' => $order->customer_email,
+                    'customer_phone' => $order->customer_phone,
+                    'tax_amount' => 0 // Products don't have tax as per user requirement
+                ];
+            });
 
             return response()->json([
-                'orders' => $orders,
-                'total' => $total,
-                'per_page' => $perPage,
-                'current_page' => $page,
-                'last_page' => ceil($total / $perPage)
+                'success' => true,
+                'data' => [
+                    'data' => $orders,
+                    'total' => $total,
+                    'per_page' => $perPage,
+                    'current_page' => $page,
+                    'last_page' => ceil($total / $perPage),
+                    'from' => $offset + 1,
+                    'to' => min($offset + $perPage, $total)
+                ]
             ]);
 
         } catch (\Exception $e) {
             Log::error('Error getting orders data: ' . $e->getMessage());
-            return response()->json(['error' => 'Error loading orders'], 500);
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            Log::error('Request parameters: ' . json_encode($request->all()));
+            return response()->json(['success' => false, 'message' => 'Error loading orders: ' . $e->getMessage()], 500);
         }
     }
 
@@ -599,10 +676,16 @@ class OrderController extends Controller
     {
         try {
             $stats = $this->getOrderStats();
-            return response()->json($stats);
+            return response()->json([
+                'success' => true,
+                'data' => $stats
+            ]);
         } catch (\Exception $e) {
             Log::error('Error getting stats: ' . $e->getMessage());
-            return response()->json(['error' => 'Error loading stats'], 500);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading stats'
+            ], 500);
         }
     }
 
@@ -612,16 +695,31 @@ class OrderController extends Controller
             $today = Carbon::today();
             $thisMonth = Carbon::now()->startOfMonth();
 
+            // Calculate total revenue from all completed orders
+            $totalRevenue = DB::table('orders')
+                ->where('status', Order::STATUS_COMPLETED)
+                ->sum('total_amount');
+
+            // Calculate total completed orders for average calculation
+            $totalCompletedOrders = DB::table('orders')
+                ->where('status', Order::STATUS_COMPLETED)
+                ->count();
+
+            // Calculate average order value
+            $averageOrder = $totalCompletedOrders > 0 ? $totalRevenue / $totalCompletedOrders : 0;
+
             return [
                 'total_orders' => DB::table('orders')->count(),
-                'pending_orders' => DB::table('orders')->where('status', 'pending')->count(),
+                'pending_orders' => DB::table('orders')->where('status', Order::STATUS_PENDING)->count(),
                 'todays_orders' => DB::table('orders')->whereDate('created_at', $today)->count(),
                 'monthly_revenue' => DB::table('orders')
                     ->where('created_at', '>=', $thisMonth)
-                    ->where('status', 'completed')
+                    ->where('status', Order::STATUS_COMPLETED)
                     ->sum('total_amount'),
-                'processing_orders' => DB::table('orders')->where('status', 'processing')->count(),
-                'completed_orders' => DB::table('orders')->where('status', 'completed')->count()
+                'total_revenue' => $totalRevenue,
+                'average_order' => round($averageOrder, 2),
+                'processing_orders' => DB::table('orders')->where('status', Order::STATUS_IN_PROGRESS)->count(),
+                'completed_orders' => $totalCompletedOrders
             ];
 
         } catch (\Exception $e) {
@@ -631,6 +729,8 @@ class OrderController extends Controller
                 'pending_orders' => 0,
                 'todays_orders' => 0,
                 'monthly_revenue' => 0,
+                'total_revenue' => 0,
+                'average_order' => 0,
                 'processing_orders' => 0,
                 'completed_orders' => 0
             ];
@@ -642,12 +742,16 @@ class OrderController extends Controller
         try {
             $order = DB::table('orders')
                 ->leftJoin('customers', 'orders.customer_id', '=', 'customers.id')
+                ->leftJoin('customer_addresses as delivery_addr', 'orders.delivery_address_id', '=', 'delivery_addr.id')
                 ->select([
                     'orders.*',
                     'customers.name as customer_name',
                     'customers.phone as customer_phone',
                     'customers.email as customer_email',
-                    'customers.address as customer_address'
+                    'delivery_addr.address_line_1 as delivery_address',
+                    'delivery_addr.city as delivery_city',
+                    'delivery_addr.state as delivery_state',
+                    'delivery_addr.postal_code as delivery_postal_code'
                 ])
                 ->where('orders.id', $id)
                 ->first();

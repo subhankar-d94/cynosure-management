@@ -123,9 +123,8 @@
                                 <option value="">All Status</option>
                                 <option value="pending">Pending</option>
                                 <option value="confirmed">Confirmed</option>
-                                <option value="processing">Processing</option>
-                                <option value="shipped">Shipped</option>
-                                <option value="delivered">Delivered</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="completed">Completed</option>
                                 <option value="cancelled">Cancelled</option>
                             </select>
                         </div>
@@ -134,8 +133,8 @@
                             <select class="form-select" id="payment_status">
                                 <option value="">All Payments</option>
                                 <option value="pending">Pending</option>
+                                <option value="partial">Partial</option>
                                 <option value="paid">Paid</option>
-                                <option value="partially_paid">Partially Paid</option>
                                 <option value="failed">Failed</option>
                                 <option value="refunded">Refunded</option>
                             </select>
@@ -143,8 +142,9 @@
                         <div class="col-md-2">
                             <label class="form-label">Date Range</label>
                             <select class="form-select" id="date_range">
+                                <option value="" selected>All Orders</option>
                                 <option value="today">Today</option>
-                                <option value="week" selected>This Week</option>
+                                <option value="week">This Week</option>
                                 <option value="month">This Month</option>
                                 <option value="quarter">This Quarter</option>
                                 <option value="custom">Custom Range</option>
@@ -439,17 +439,49 @@ function loadStats() {
 
 function getFilters() {
     const filters = {
-        search: $('#search').val(),
-        status: $('#status').val(),
-        payment_status: $('#payment_status').val(),
-        date_range: $('#date_range').val(),
+        search: $('#search').val() || '',
+        status: $('#status').val() || '',
+        payment_status: $('#payment_status').val() || '',
+        date_range: $('#date_range').val() || '',
         page: currentPage,
         per_page: perPage
     };
 
     if (filters.date_range === 'custom') {
-        filters.start_date = $('#start_date').val();
-        filters.end_date = $('#end_date').val();
+        filters.date_from = $('#start_date').val();
+        filters.date_to = $('#end_date').val();
+    } else if (filters.date_range) {
+        // Calculate dates based on the selected range
+        const today = new Date();
+        const formatDate = (date) => date.toISOString().split('T')[0];
+
+        switch (filters.date_range) {
+            case 'today':
+                filters.date_from = formatDate(today);
+                filters.date_to = formatDate(today);
+                break;
+            case 'week':
+                const weekStart = new Date(today);
+                weekStart.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekStart.getDate() + 6); // End of week (Saturday)
+                filters.date_from = formatDate(weekStart);
+                filters.date_to = formatDate(weekEnd);
+                break;
+            case 'month':
+                const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+                const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                filters.date_from = formatDate(monthStart);
+                filters.date_to = formatDate(monthEnd);
+                break;
+            case 'quarter':
+                const quarter = Math.floor(today.getMonth() / 3);
+                const quarterStart = new Date(today.getFullYear(), quarter * 3, 1);
+                const quarterEnd = new Date(today.getFullYear(), quarter * 3 + 3, 0);
+                filters.date_from = formatDate(quarterStart);
+                filters.date_to = formatDate(quarterEnd);
+                break;
+        }
     }
 
     return filters;
@@ -529,7 +561,7 @@ function renderOrdersTable(orders) {
                             <button class="btn btn-outline-secondary" onclick="updateStatus(${order.id})">
                                 <i class="bi bi-arrow-repeat"></i>
                             </button>
-                            <a href="{{ route('orders.edit', '') }}/${order.id}" class="btn btn-outline-warning">
+                            <a href="/orders/${order.id}/edit" class="btn btn-outline-warning">
                                 <i class="bi bi-pencil"></i>
                             </a>
                             <div class="btn-group btn-group-sm">
@@ -537,8 +569,8 @@ function renderOrdersTable(orders) {
                                     <i class="bi bi-three-dots"></i>
                                 </button>
                                 <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="{{ route('orders.invoice', '') }}/${order.id}">View Invoice</a></li>
-                                    <li><a class="dropdown-item" href="{{ route('orders.print', '') }}/${order.id}">Print Order</a></li>
+                                    <li><a class="dropdown-item" href="/orders/${order.id}/invoice">View Invoice</a></li>
+                                    <li><a class="dropdown-item" href="/orders/${order.id}/print">Print Order</a></li>
                                     <li><button class="dropdown-item" onclick="duplicateOrder(${order.id})">Duplicate</button></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><button class="dropdown-item text-danger" onclick="deleteOrder(${order.id})">Delete</button></li>
@@ -558,9 +590,8 @@ function getOrderStatusClass(status) {
     const statusClasses = {
         'pending': 'bg-warning',
         'confirmed': 'bg-info',
-        'processing': 'bg-primary',
-        'shipped': 'bg-secondary',
-        'delivered': 'bg-success',
+        'in_progress': 'bg-primary',
+        'completed': 'bg-success',
         'cancelled': 'bg-danger'
     };
     return statusClasses[status] || 'bg-secondary';
@@ -569,8 +600,8 @@ function getOrderStatusClass(status) {
 function getPaymentStatusClass(status) {
     const statusClasses = {
         'pending': 'bg-warning',
+        'partial': 'bg-info',
         'paid': 'bg-success',
-        'partially_paid': 'bg-info',
         'failed': 'bg-danger',
         'refunded': 'bg-secondary'
     };
