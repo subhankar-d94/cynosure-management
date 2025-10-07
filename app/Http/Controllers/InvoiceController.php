@@ -113,14 +113,23 @@ class InvoiceController extends Controller
 
             // Handle customer data
             if ($request->customer_type === 'existing' && $request->customer_id) {
-                $invoiceData['customer_id'] = $request->customer_id;
+                // Get customer details and populate invoice fields
+                $customer = DB::table('customers')->where('id', $request->customer_id)->first();
+                if ($customer) {
+                    $invoiceData['customer_id'] = $request->customer_id;
+                    $invoiceData['customer_name'] = $customer->name;
+                    $invoiceData['customer_email'] = $customer->email;
+                    $invoiceData['customer_phone'] = $customer->phone;
+                    $invoiceData['customer_company'] = $customer->company;
+                    $invoiceData['customer_address'] = $customer->address;
+                }
             } else {
                 // For new customers, store customer info in invoice
                 $invoiceData['customer_name'] = $request->customer_name;
                 $invoiceData['customer_email'] = $request->customer_email;
                 $invoiceData['customer_phone'] = $request->customer_phone;
                 $invoiceData['customer_company'] = $request->customer_company;
-                $invoiceData['billing_address'] = $request->billing_address;
+                $invoiceData['customer_address'] = $request->billing_address;
             }
 
             $invoiceId = DB::table('invoices')->insertGetId($invoiceData);
