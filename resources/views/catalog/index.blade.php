@@ -131,6 +131,46 @@ use Illuminate\Support\Facades\Storage;
         flex-direction: column;
         gap: 0.5rem;
     }
+
+    /* Better spacing between categories on mobile */
+    .category-section {
+        margin-bottom: 2rem;
+    }
+
+    .category-header {
+        margin-bottom: 1rem;
+    }
+
+    /* "Coming soon" section improvements */
+    .contact-info .d-flex.flex-wrap {
+        flex-direction: column;
+        gap: 0.5rem !important;
+    }
+
+    .contact-info .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+        padding: 1rem;
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .category-section {
+        margin-bottom: 1.5rem;
+    }
+
+    .contact-info {
+        padding: 1rem 0.5rem;
+    }
+
+    .contact-info h3 {
+        font-size: 1.2rem;
+    }
+
+    .contact-info p {
+        font-size: 0.9rem;
+    }
 }
 </style>
 @endpush

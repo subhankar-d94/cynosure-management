@@ -164,6 +164,50 @@ use Illuminate\Support\Facades\Storage;
     .row > .col-md-6 {
         margin-bottom: 1rem;
     }
+
+    /* Mobile-first search and sort */
+    .col-md-6 form {
+        margin-bottom: 1rem;
+    }
+
+    .form-select {
+        width: 100% !important;
+        margin-top: 0.5rem;
+    }
+
+    .d-flex.gap-2 {
+        flex-direction: column;
+        gap: 0.5rem !important;
+    }
+
+    .d-flex.gap-2 .form-control {
+        margin-bottom: 0.5rem;
+    }
+
+    .d-flex.gap-2 .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Better spacing for mobile */
+    .category-header {
+        margin-bottom: 1rem;
+    }
+
+    .text-end {
+        text-align: left !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .col-md-6 {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    .form-control, .form-select {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
 }
 </style>
 @endpush

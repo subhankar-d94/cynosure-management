@@ -184,6 +184,61 @@ use Illuminate\Support\Facades\Storage;
     .row > .col-md-6 {
         margin-bottom: 1rem;
     }
+
+    /* Mobile search form */
+    .d-flex.gap-2 {
+        flex-direction: column;
+        gap: 0.5rem !important;
+    }
+
+    .d-flex.gap-2 .form-control {
+        margin-bottom: 0.5rem;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    .d-flex.gap-2 .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* No results section */
+    .contact-info .d-flex.flex-wrap {
+        flex-direction: column;
+        gap: 0.5rem !important;
+    }
+
+    .contact-info .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Categories buttons */
+    .d-flex.flex-wrap.gap-2 {
+        justify-content: flex-start !important;
+    }
+
+    .d-flex.flex-wrap.gap-2 .btn {
+        flex: 1 1 calc(50% - 0.25rem);
+        font-size: 0.8rem;
+        padding: 0.5rem 0.25rem;
+        text-align: center;
+    }
+
+    .text-end {
+        text-align: left !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .d-flex.flex-wrap.gap-2 .btn {
+        flex: 1 1 100%;
+        margin-bottom: 0.25rem;
+    }
+
+    .col-md-6 {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
 }
 </style>
 @endpush

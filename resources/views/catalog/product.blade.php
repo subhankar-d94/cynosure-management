@@ -220,6 +220,66 @@ use Illuminate\Support\Facades\Storage;
     .main-image {
         margin-bottom: 1rem;
     }
+
+    .main-image img {
+        height: 250px !important;
+    }
+
+    .thumbnail-image {
+        height: 60px !important;
+    }
+
+    .product-details-section .table td {
+        padding: 0.5rem 0.25rem;
+        font-size: 0.85rem;
+    }
+
+    .product-details-section h5 {
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .contact-info .d-grid .btn {
+        padding: 1rem;
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .contact-info .row .btn {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .product-gallery .row.g-2 {
+        gap: 0.5rem !important;
+    }
+
+    .product-gallery .col-3 {
+        flex: 0 0 calc(25% - 0.375rem);
+    }
+}
+
+@media (max-width: 480px) {
+    .main-image img {
+        height: 200px !important;
+    }
+
+    .product-gallery .col-3 {
+        flex: 0 0 calc(50% - 0.25rem);
+    }
+
+    .thumbnail-image {
+        height: 50px !important;
+    }
+
+    .contact-info .row {
+        flex-direction: column;
+    }
+
+    .contact-info .row .col-6 {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
 }
 </style>
 @endpush
