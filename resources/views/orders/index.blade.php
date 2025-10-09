@@ -528,7 +528,7 @@ function renderOrdersTable(orders) {
                     <td>
                         <div>
                             <h6 class="mb-0">${order.customer ? order.customer.name : 'Walk-in Customer'}</h6>
-                            <small class="text-muted">${order.customer ? order.customer.email : 'No email'}</small>
+                            <small class="text-muted">${order.customer ? order.customer.phone : 'No email'}</small>
                         </div>
                     </td>
                     <td>
@@ -647,26 +647,38 @@ function quickView(orderId) {
 
     $('#quickViewModal').modal('show');
 
-    $.get(`{{ route('orders.details', '') }}/${orderId}`)
+    $.get(`/orders/${orderId}/details`)
         .done(function(response) {
-            if (response.success) {
+            console.log('Order details response:', response);
+            if (response.success && response.data) {
                 displayOrderDetails(response.data);
                 $('#viewFullOrderBtn').attr('onclick', `window.open('{{ route('orders.show', '') }}/${orderId}', '_blank')`);
+            } else {
+                console.error('Invalid response format:', response);
+                $('#quickViewBody').html('<p class="text-danger">Invalid response format</p>');
             }
         })
-        .fail(function() {
+        .fail(function(xhr, status, error) {
+            console.error('Ajax error:', xhr, status, error);
             $('#quickViewBody').html('<p class="text-danger">Error loading order details</p>');
         });
 }
 
 function displayOrderDetails(order) {
+    console.log('Displaying order details for:', order);
+
+    if (!order) {
+        $('#quickViewBody').html('<p class="text-danger">Order data is missing</p>');
+        return;
+    }
+
     const html = `
         <div class="row">
             <div class="col-md-6">
                 <h6>Order Information</h6>
                 <table class="table table-sm">
-                    <tr><td>Order Number:</td><td>#${order.order_number}</td></tr>
-                    <tr><td>Customer:</td><td>${order.customer ? order.customer.name : 'Walk-in Customer'}</td></tr>
+                    <tr><td>Order Number:</td><td>#${order.order_number || 'N/A'}</td></tr>
+                    <tr><td>Customer Name:</td><td>${order.customer_name ? order.customer_name : 'Unknown'}</td></tr>
                     <tr><td>Date:</td><td>${new Date(order.created_at).toLocaleString()}</td></tr>
                     <tr><td>Status:</td><td><span class="badge ${getOrderStatusClass(order.status)}">${order.status}</span></td></tr>
                 </table>
@@ -698,7 +710,7 @@ function displayOrderDetails(order) {
                 <tbody>
                     ${order.items ? order.items.map(item => `
                         <tr>
-                            <td>${item.product ? item.product.name : 'Unknown Product'}</td>
+                            <td>${item.product_name ? item.product_name : 'Unknown Product'}</td>
                             <td>${item.quantity}</td>
                             <td>₹${item.unit_price.toLocaleString()}</td>
                             <td>₹${(item.quantity * item.unit_price).toLocaleString()}</td>

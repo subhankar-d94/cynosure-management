@@ -1,5 +1,31 @@
 @extends('layouts.app')
 
+@php
+function formatDate($date, $default = 'N/A') {
+    if (!$date) return $default;
+    if (is_string($date)) {
+        try {
+            return \Carbon\Carbon::parse($date)->format('M d, Y h:i A');
+        } catch (\Exception $e) {
+            return $default;
+        }
+    }
+    return $date->format('M d, Y h:i A');
+}
+
+function formatDateOnly($date, $default = 'N/A') {
+    if (!$date) return $default;
+    if (is_string($date)) {
+        try {
+            return \Carbon\Carbon::parse($date)->format('M d, Y');
+        } catch (\Exception $e) {
+            return $default;
+        }
+    }
+    return $date->format('M d, Y');
+}
+@endphp
+
 @section('content')
 <div class="container-fluid">
     <div class="row">
@@ -9,7 +35,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <div>
                         <h3 class="card-title mb-0">Invoice #{{ $invoice->invoice_number ?? 'INV-2024-12345' }}</h3>
-                        <small class="text-muted">Created on {{ $invoice->created_at->format('M d, Y h:i A') ?? 'Jan 15, 2024 10:30 AM' }}</small>
+                        <small class="text-muted">Created on {{ formatDate($invoice->created_at ?? null, 'Jan 15, 2024 10:30 AM') }}</small>
                     </div>
                     <div class="d-flex gap-2">
                         <div class="dropdown">
@@ -73,17 +99,17 @@
                         </div>
                         <div class="col-md-3">
                             <strong>Issue Date:</strong><br>
-                            <span class="text-muted">{{ $invoice->issue_date ?? '2024-01-15' }}</span>
+                            <span class="text-muted">{{ formatDateOnly($invoice->issue_date ?? null, 'Jan 15, 2024') }}</span>
                         </div>
                         <div class="col-md-3">
                             <strong>Due Date:</strong><br>
                             <span class="text-muted {{ ($invoice->due_date ?? '2024-02-15') < date('Y-m-d') && ($invoice->status ?? 'draft') !== 'paid' ? 'text-danger fw-bold' : '' }}">
-                                {{ $invoice->due_date ?? '2024-02-15' }}
+                                {{ formatDateOnly($invoice->due_date ?? null, 'Feb 15, 2024') }}
                             </span>
                         </div>
                         <div class="col-md-3">
                             <strong>Total Amount:</strong><br>
-                            <h5 class="text-primary mb-0">${{ number_format($invoice->total ?? 1299.99, 2) }}</h5>
+                            <h5 class="text-primary mb-0">₹{{ number_format($invoice->total ?? 1299.99, 2) }}</h5>
                         </div>
                     </div>
                 </div>
@@ -169,15 +195,15 @@
                                                 <td>
                                                     <div>
                                                         <strong>{{ $item->description ?? 'Sample Service' }}</strong>
-                                                        @if($item->details)
+                                                        @if(isset($item->details) && $item->details)
                                                         <br><small class="text-muted">{{ $item->details }}</small>
                                                         @endif
                                                     </div>
                                                 </td>
                                                 <td class="text-center">{{ $item->quantity ?? 2 }}</td>
-                                                <td class="text-end">${{ number_format($item->rate ?? 599.99, 2) }}</td>
+                                                <td class="text-end">₹{{ number_format($item->rate ?? 599.99, 2) }}</td>
                                                 <td class="text-center">{{ $item->tax_rate ?? 8 }}%</td>
-                                                <td class="text-end"><strong>${{ number_format($item->amount ?? 1295.98, 2) }}</strong></td>
+                                                <td class="text-end"><strong>₹{{ number_format($item->amount ?? 1295.98, 2) }}</strong></td>
                                             </tr>
                                             @endforeach
                                         @else
@@ -216,21 +242,21 @@
                                     <table class="table table-sm">
                                         <tr>
                                             <td><strong>Subtotal:</strong></td>
-                                            <td class="text-end">${{ number_format($invoice->subtotal ?? 1850.00, 2) }}</td>
+                                            <td class="text-end">₹{{ number_format($invoice->subtotal ?? 1850.00, 2) }}</td>
                                         </tr>
                                         @if(($invoice->discount ?? 0) > 0)
                                         <tr>
                                             <td><strong>Discount:</strong></td>
-                                            <td class="text-end text-success">-${{ number_format($invoice->discount ?? 0, 2) }}</td>
+                                            <td class="text-end text-success">-₹{{ number_format($invoice->discount ?? 0, 2) }}</td>
                                         </tr>
                                         @endif
                                         <tr>
                                             <td><strong>Tax:</strong></td>
-                                            <td class="text-end">${{ number_format($invoice->tax ?? 108.00, 2) }}</td>
+                                            <td class="text-end">₹{{ number_format($invoice->tax_amount ?? 108.00, 2) }}</td>
                                         </tr>
                                         <tr class="table-primary">
                                             <td><strong>Total:</strong></td>
-                                            <td class="text-end"><strong>${{ number_format($invoice->total ?? 1958.00, 2) }}</strong></td>
+                                            <td class="text-end"><strong>₹{{ number_format($invoice->total ?? 1958.00, 2) }}</strong></td>
                                         </tr>
                                     </table>
                                 </div>
@@ -291,17 +317,17 @@
                             <div class="row">
                                 <div class="col-sm-6">
                                     <strong>Total Amount:</strong><br>
-                                    <span class="h5 text-primary">${{ number_format($invoice->total ?? 1958.00, 2) }}</span>
+                                    <span class="h5 text-primary">₹{{ number_format($invoice->total ?? 1958.00, 2) }}</span>
                                 </div>
                                 <div class="col-sm-6">
                                     <strong>Amount Paid:</strong><br>
-                                    <span class="h5 text-success">${{ number_format($invoice->paid_amount ?? 0, 2) }}</span>
+                                    <span class="h5 text-success">₹{{ number_format($invoice->paid_amount ?? 0, 2) }}</span>
                                 </div>
                             </div>
                             @if(($invoice->total ?? 1958.00) > ($invoice->paid_amount ?? 0))
                             <div class="mt-3">
                                 <div class="alert alert-warning">
-                                    <strong>Balance Due:</strong> ${{ number_format(($invoice->total ?? 1958.00) - ($invoice->paid_amount ?? 0), 2) }}
+                                    <strong>Balance Due:</strong> ₹{{ number_format(($invoice->total ?? 1958.00) - ($invoice->paid_amount ?? 0), 2) }}
                                 </div>
                                 @if(($invoice->status ?? 'draft') !== 'paid')
                                 <button type="button" class="btn btn-success btn-sm w-100" onclick="markAsPaid()">
@@ -324,7 +350,7 @@
                                     <div class="timeline-marker bg-success"></div>
                                     <div class="timeline-content">
                                         <h6 class="mb-1">Invoice Created</h6>
-                                        <small class="text-muted">{{ $invoice->created_at->format('M d, Y h:i A') ?? 'Jan 15, 2024 10:30 AM' }}</small>
+                                        <small class="text-muted">{{ formatDate($invoice->created_at ?? null, 'Jan 15, 2024 10:30 AM') }}</small>
                                     </div>
                                 </div>
                                 @if(($invoice->status ?? 'draft') !== 'draft')
@@ -418,7 +444,7 @@
                         <label for="emailMessage" class="form-label">Message</label>
                         <textarea class="form-control" id="emailMessage" rows="4">Dear {{ $invoice->customer->name ?? $invoice->customer_name ?? 'Customer' }},
 
-Please find attached your invoice. Payment is due by {{ $invoice->due_date ?? '2024-02-15' }}.
+Please find attached your invoice. Payment is due by {{ formatDateOnly($invoice->due_date ?? null, 'Feb 15, 2024') }}.
 
 Thank you for your business!
 

@@ -564,7 +564,7 @@ class InvoiceController extends Controller
                     'invoices.issue_date',
                     'invoices.due_date',
                     'invoices.status',
-                    'invoices.total',
+                    'invoices.total_amount as total',
                     'invoices.paid_amount',
                     'invoices.created_at',
                     'customers.name as customer_name',
@@ -697,8 +697,7 @@ class InvoiceController extends Controller
                     'customers.name as customer_name',
                     'customers.email as customer_email',
                     'customers.phone as customer_phone',
-                    'customers.company as customer_company',
-                    'customers.address as customer_address'
+                    'customers.company_name as customer_company'
                 ])
                 ->where('invoices.id', $id)
                 ->first();

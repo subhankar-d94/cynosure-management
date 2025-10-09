@@ -817,4 +817,176 @@ class OrderController extends Controller
             return response()->json(['error' => 'Error exporting orders'], 500);
         }
     }
+
+    public function getDetails($id)
+    {
+        try {
+            $order = DB::table('orders')
+                ->leftJoin('customers', 'orders.customer_id', '=', 'customers.id')
+                ->select([
+                    'orders.*',
+                    'customers.name as customer_name',
+                    'customers.email as customer_email',
+                    'customers.phone as customer_phone',
+                    'customers.company_name as customer_company'
+                ])
+                ->where('orders.id', $id)
+                ->first();
+
+            if (!$order) {
+                Log::warning("Order not found with ID: {$id}");
+                return response()->json(['success' => false, 'error' => 'Order not found'], 404);
+            }
+
+            Log::info("Found order: " . json_encode($order));
+
+            // Get order items
+            $items = DB::table('order_items')
+                ->leftJoin('products', 'order_items.product_id', '=', 'products.id')
+                ->select([
+                    'order_items.*',
+                    'products.name as product_name',
+                    'products.sku'
+                ])
+                ->where('order_items.order_id', $id)
+                ->get();
+
+            $order->items = $items;
+
+            // Calculate order metrics
+            $metrics = [
+                'total_items' => $items->count(),
+                'total_quantity' => $items->sum('quantity'),
+                'average_item_price' => $items->count() > 0 ? $items->avg('price') : 0,
+                'days_since_order' => Carbon::parse($order->created_at)->diffInDays(now()),
+                'fulfillment_status' => $this->calculateFulfillmentStatus($order),
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $order,
+                'metrics' => $metrics
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error getting order details: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => 'Error loading order details'], 500);
+        }
+    }
+
+    public function generateInvoice($id)
+    {
+        try {
+            $order = DB::table('orders')
+                ->leftJoin('customers', 'orders.customer_id', '=', 'customers.id')
+                ->select([
+                    'orders.*',
+                    'customers.name as customer_name',
+                    'customers.email as customer_email',
+                    'customers.phone as customer_phone',
+                    'customers.company_name as customer_company',
+                    'customers.gst_number',
+                ])
+                ->where('orders.id', $id)
+                ->first();
+
+            if (!$order) {
+                return redirect()->route('orders.index')->with('error', 'Order not found.');
+            }
+
+            // Check if invoice already exists for this order
+            $existingInvoice = DB::table('invoices')->where('order_id', $id)->first();
+            if ($existingInvoice) {
+                return redirect()->route('invoices.show', $existingInvoice->id)
+                    ->with('info', 'Invoice already exists for this order.');
+            }
+
+            // Get order items
+            $items = DB::table('order_items')
+                ->leftJoin('products', 'order_items.product_id', '=', 'products.id')
+                ->select([
+                    'order_items.*',
+                    'products.name as product_name',
+                    'products.sku'
+                ])
+                ->where('order_items.order_id', $id)
+                ->get();
+
+            DB::beginTransaction();
+
+            // Generate invoice number
+            $year = date('Y');
+            $lastInvoice = DB::table('invoices')->whereYear('created_at', $year)->orderBy('id', 'desc')->first();
+            $nextNumber = $lastInvoice ? (intval(substr($lastInvoice->invoice_number, -5)) + 1) : 1;
+            $invoiceNumber = 'INV-' . $year . '-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+
+            // Create invoice
+            $invoiceData = [
+                'order_id' => $order->id,
+                'customer_id' => $order->customer_id,
+                'invoice_number' => $invoiceNumber,
+                'invoice_date' => now()->toDateString(),
+                'issue_date' => now()->toDateString(),
+                'due_date' => now()->addDays(30)->toDateString(),
+                'customer_name' => $order->customer_name,
+                'customer_email' => $order->customer_email,
+                'customer_phone' => $order->customer_phone,
+                'customer_address' => $order->customer_address,
+                'total_amount' => $order->total_amount,
+                'total' => $order->total_amount,
+                'subtotal' => $order->subtotal ?: $order->total_amount,
+                'discount' => $order->discount ?: 0,
+                'tax_amount' => $order->tax ?: 0,
+                'status' => 'generated',
+                'payment_status' => 'pending',
+                'paid_amount' => 0,
+                'created_at' => now(),
+                'updated_at' => now()
+            ];
+
+            $invoiceId = DB::table('invoices')->insertGetId($invoiceData);
+
+            // Create invoice items
+            foreach ($items as $item) {
+                DB::table('invoice_items')->insert([
+                    'invoice_id' => $invoiceId,
+                    'description' => $item->product_name ?: 'Product',
+                    'quantity' => $item->quantity,
+                    'rate' => $item->price ?: $item->unit_price,
+                    'tax_rate' => 0,
+                    'amount' => $item->total ?: ($item->quantity * ($item->price ?: $item->unit_price)),
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+            }
+
+            DB::commit();
+
+            return redirect()->route('invoices.show', $invoiceId)
+                ->with('success', 'Invoice generated successfully from order.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error generating invoice from order: ' . $e->getMessage());
+            return back()->with('error', 'Error generating invoice: ' . $e->getMessage());
+        }
+    }
+
+    private function calculateFulfillmentStatus($order)
+    {
+        switch ($order->status) {
+            case 'pending':
+                return 'Awaiting Processing';
+            case 'processing':
+                return 'In Progress';
+            case 'shipped':
+                return 'Shipped';
+            case 'delivered':
+                return 'Delivered';
+            case 'cancelled':
+                return 'Cancelled';
+            default:
+                return 'Unknown';
+        }
+    }
 }

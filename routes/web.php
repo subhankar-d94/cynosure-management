@@ -55,18 +55,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/', [CategoryController::class, 'index'])->name('index');
         Route::get('/create', [CategoryController::class, 'create'])->name('create');
         Route::post('/', [CategoryController::class, 'store'])->name('store');
+
+        // Additional category routes (must be before {category} routes)
+        Route::get('/hierarchy', [CategoryController::class, 'getHierarchy'])->name('hierarchy');
+        Route::get('/data/list', [CategoryController::class, 'getData'])->name('data');
+
         Route::get('/{category}', [CategoryController::class, 'show'])->name('show');
         Route::get('/{category}/edit', [CategoryController::class, 'edit'])->name('edit');
         Route::put('/{category}', [CategoryController::class, 'update'])->name('update');
         Route::delete('/{category}', [CategoryController::class, 'destroy'])->name('destroy');
-
-        // Additional category routes
-        Route::get('/data/hierarchy', [CategoryController::class, 'getHierarchy'])->name('hierarchy');
         Route::post('/{category}/toggle-status', [CategoryController::class, 'toggleStatus'])->name('toggle-status');
         Route::post('/bulk-activate', [CategoryController::class, 'bulkActivate'])->name('bulk-activate');
         Route::post('/bulk-deactivate', [CategoryController::class, 'bulkDeactivate'])->name('bulk-deactivate');
         Route::post('/bulk-delete', [CategoryController::class, 'bulkDelete'])->name('bulk-delete');
-        Route::get('/data/list', [CategoryController::class, 'getData'])->name('data');
     });
 
     // Product Routes
