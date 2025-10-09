@@ -14,6 +14,7 @@ use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\CatalogController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -29,7 +30,17 @@ use Illuminate\Support\Facades\Route;
 
 // Public routes
 Route::get('/', function () {
-    return redirect()->route('dashboard.index');
+    // Redirect to catalog for public users, dashboard for authenticated users
+    return auth()->check() ? redirect()->route('dashboard.index') : redirect()->route('catalog.index');
+});
+
+// Public Product Catalog Routes
+Route::prefix('catalog')->name('catalog.')->group(function () {
+    Route::get('/', [CatalogController::class, 'index'])->name('index');
+    Route::get('/search', [CatalogController::class, 'search'])->name('search');
+    Route::get('/download', [CatalogController::class, 'downloadCatalog'])->name('download');
+    Route::get('/{categorySlug}', [CatalogController::class, 'category'])->name('category');
+    Route::get('/{categorySlug}/{productId}', [CatalogController::class, 'product'])->name('product');
 });
 
 // Public shipment tracking
