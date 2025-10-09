@@ -4,7 +4,11 @@
     function formatDate($date, $default = 'N/A') {
         if (!$date) return $default;
         if (is_string($date)) {
-            return \Carbon\Carbon::parse($date)->format('M d, Y h:i A');
+            try {
+                return \Carbon\Carbon::parse($date)->format('M d, Y h:i A');
+            } catch (\Exception $e) {
+                return $default;
+            }
         }
         return $date->format('M d, Y h:i A');
     }
@@ -18,17 +22,17 @@
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <div>
-                        <h3 class="card-title mb-0">Order #{{ $order->order_number ?? 'ORD-2024-12345' }}</h3>
-                        <small class="text-muted">Created on {{ formatDate($order->created_at, 'Jan 15, 2024 10:30 AM') }}</small>
+                        <h3 class="card-title mb-0">Order #{{ $order->order_number }}</h3>
+                        <small class="text-muted">Created on {{ formatDate($order->created_at) }}</small>
                     </div>
                     <div class="d-flex gap-2">
-                        @if(($order->status ?? 'pending') !== 'cancelled')
+                        @if($order->status !== 'cancelled')
                         <div class="dropdown">
                             <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
                                 <i class="fas fa-cog"></i> Actions
                             </button>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="{{ route('orders.edit', $order->id ?? 1) }}">
+                                <li><a class="dropdown-item" href="{{ route('orders.edit', $order->id) }}">
                                     <i class="fas fa-edit"></i> Edit Order
                                 </a></li>
                                 <li><a class="dropdown-item" href="#" onclick="duplicateOrder()">
@@ -57,23 +61,23 @@
                         <div class="col-md-3">
                             <div class="d-flex align-items-center">
                                 <span class="badge bg-{{
-                                    ($order->status ?? 'pending') === 'completed' ? 'success' :
-                                    (($order->status ?? 'pending') === 'processing' ? 'warning' :
-                                    (($order->status ?? 'pending') === 'cancelled' ? 'danger' : 'primary'))
+                                    $order->status === 'completed' ? 'success' :
+                                    ($order->status === 'in_progress' ? 'warning' :
+                                    ($order->status === 'cancelled' ? 'danger' : 'primary'))
                                 }} fs-6 me-2">
-                                    {{ ucfirst($order->status ?? 'pending') }}
+                                    {{ ucfirst(str_replace('_', ' ', $order->status)) }}
                                 </span>
                                 <span class="badge bg-{{
-                                    ($order->priority ?? 'medium') === 'urgent' ? 'danger' :
-                                    (($order->priority ?? 'medium') === 'high' ? 'warning' : 'secondary')
+                                    $order->priority === 'urgent' ? 'danger' :
+                                    ($order->priority === 'high' ? 'warning' : 'secondary')
                                 }}">
-                                    {{ ucfirst($order->priority ?? 'medium') }}
+                                    {{ ucfirst($order->priority) }}
                                 </span>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <strong>Order Date:</strong><br>
-                            <span class="text-muted">{{ $order->order_date ?? '2024-01-15' }}</span>
+                            <span class="text-muted">{{ $order->order_date }}</span>
                         </div>
                         <div class="col-md-3">
                             <strong>Expected Delivery:</strong><br>
@@ -81,7 +85,7 @@
                         </div>
                         <div class="col-md-3">
                             <strong>Total Amount:</strong><br>
-                            <h5 class="text-success mb-0">${{ number_format($order->total ?? 1299.99, 2) }}</h5>
+                            <h5 class="text-success mb-0">₹{{ number_format($order->total_amount, 2) }}</h5>
                         </div>
                     </div>
                 </div>
@@ -93,29 +97,54 @@
                     <div class="card h-100">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="card-title mb-0">Customer Information</h5>
-                            @if(isset($order->customer))
-                            <a href="{{ route('customers.show', $order->customer->id) }}" class="btn btn-sm btn-outline-primary">
+                            @if($order->customer_id)
+                            <a href="{{ route('customers.show', $order->customer_id) }}" class="btn btn-sm btn-outline-primary">
                                 View Profile
                             </a>
                             @endif
                         </div>
                         <div class="card-body">
-                            @if(isset($order->customer))
+                            @if($order->customer_id)
                             <div class="d-flex align-items-start">
                                 <div class="avatar-circle me-3">
-                                    {{ strtoupper(substr($order->customer->name, 0, 2)) }}
+                                    {{ strtoupper(substr($order->customer_name, 0, 2)) }}
                                 </div>
                                 <div>
-                                    <h6 class="mb-1">{{ $order->customer->name }}</h6>
+                                    <h6 class="mb-1">{{ $order->customer_name }}</h6>
                                     <p class="text-muted mb-2">
-                                        <i class="fas fa-phone"></i> {{ $order->customer->phone }}<br>
-                                        <i class="fas fa-envelope"></i> {{ $order->customer->email }}<br>
-                                        <i class="fas fa-map-marker-alt"></i> {{ $order->customer->address }}
+                                        @if($order->customer_phone)
+                                        <i class="fas fa-phone"></i> {{ $order->customer_phone }}<br>
+                                        @endif
+                                        @if($order->customer_email)
+                                        <i class="fas fa-envelope"></i> {{ $order->customer_email }}<br>
+                                        @endif
+                                        @if($order->delivery_address)
+                                        <i class="fas fa-map-marker-alt"></i> {{ $order->delivery_address }}
+                                        @if($order->delivery_city), {{ $order->delivery_city }}@endif
+                                        @if($order->delivery_state), {{ $order->delivery_state }}@endif
+                                        @if($order->delivery_postal_code) {{ $order->delivery_postal_code }}@endif
+                                        @endif
                                     </p>
-                                    <div class="d-flex gap-2">
-                                        <span class="badge bg-light text-dark">{{ $order->customer->orders_count ?? 15 }} Orders</span>
-                                        <span class="badge bg-light text-dark">${{ number_format($order->customer->total_spent ?? 5429.50, 2) }} Total</span>
-                                    </div>
+                                </div>
+                            </div>
+                            @elseif($order->customer_name)
+                            <div class="d-flex align-items-start">
+                                <div class="avatar-circle me-3">
+                                    {{ strtoupper(substr($order->customer_name, 0, 2)) }}
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">{{ $order->customer_name }}</h6>
+                                    <p class="text-muted mb-2">
+                                        @if($order->customer_phone)
+                                        <i class="fas fa-phone"></i> {{ $order->customer_phone }}<br>
+                                        @endif
+                                        @if($order->customer_email)
+                                        <i class="fas fa-envelope"></i> {{ $order->customer_email }}<br>
+                                        @endif
+                                        @if($order->customer_address)
+                                        <i class="fas fa-map-marker-alt"></i> {{ $order->customer_address }}
+                                        @endif
+                                    </p>
                                 </div>
                             </div>
                             @else
@@ -139,21 +168,26 @@
                             <div class="row">
                                 <div class="col-sm-6">
                                     <strong>Payment Method:</strong><br>
+                                    @if($order->payment_method)
                                     <span class="badge bg-light text-dark">
                                         <i class="fas fa-{{
-                                            ($order->payment_method ?? 'cash') === 'card' ? 'credit-card' :
-                                            (($order->payment_method ?? 'cash') === 'bank_transfer' ? 'university' : 'money-bill')
+                                            $order->payment_method === 'card' ? 'credit-card' :
+                                            ($order->payment_method === 'bank_transfer' ? 'university' :
+                                            ($order->payment_method === 'upi' ? 'mobile-alt' : 'money-bill'))
                                         }}"></i>
-                                        {{ ucwords(str_replace('_', ' ', $order->payment_method ?? 'cash')) }}
+                                        {{ ucwords(str_replace('_', ' ', $order->payment_method)) }}
                                     </span>
+                                    @else
+                                    <span class="text-muted">Not specified</span>
+                                    @endif
                                 </div>
                                 <div class="col-sm-6">
                                     <strong>Payment Status:</strong><br>
                                     <span class="badge bg-{{
-                                        ($order->payment_status ?? 'pending') === 'paid' ? 'success' :
-                                        (($order->payment_status ?? 'pending') === 'partial' ? 'warning' : 'danger')
+                                        $order->payment_status === 'paid' ? 'success' :
+                                        ($order->payment_status === 'partial' ? 'warning' : 'danger')
                                     }}">
-                                        {{ ucfirst($order->payment_status ?? 'pending') }}
+                                        {{ ucfirst($order->payment_status) }}
                                     </span>
                                 </div>
                             </div>
@@ -161,17 +195,17 @@
                             <div class="row">
                                 <div class="col-sm-6">
                                     <strong>Total Amount:</strong><br>
-                                    <span class="h5 text-primary">${{ number_format($order->total ?? 1299.99, 2) }}</span>
+                                    <span class="h5 text-primary">₹{{ number_format($order->total_amount, 2) }}</span>
                                 </div>
                                 <div class="col-sm-6">
                                     <strong>Paid Amount:</strong><br>
-                                    <span class="h5 text-success">${{ number_format($order->paid_amount ?? 1299.99, 2) }}</span>
+                                    <span class="h5 text-success">₹{{ number_format($order->paid_amount, 2) }}</span>
                                 </div>
                             </div>
-                            @if(($order->total ?? 1299.99) > ($order->paid_amount ?? 1299.99))
+                            @if($order->total_amount > $order->paid_amount)
                             <div class="mt-3">
                                 <div class="alert alert-warning">
-                                    <strong>Balance Due:</strong> ${{ number_format(($order->total ?? 1299.99) - ($order->paid_amount ?? 1299.99), 2) }}
+                                    <strong>Balance Due:</strong> ₹{{ number_format($order->total_amount - $order->paid_amount, 2) }}
                                 </div>
                                 <button type="button" class="btn btn-success btn-sm" onclick="recordPayment()">
                                     <i class="fas fa-plus"></i> Record Payment
@@ -187,7 +221,7 @@
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Order Items</h5>
-                    <span class="badge bg-primary">{{ $order->items->count() ?? 3 }} Items</span>
+                    <span class="badge bg-primary">{{ count($order->items) }} Items</span>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -203,7 +237,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @if(isset($order->items) && $order->items->count() > 0)
+                                @if(count($order->items) > 0)
                                     @foreach($order->items as $item)
                                     <tr>
                                         <td>
@@ -214,58 +248,24 @@
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <strong>{{ $item->product->name ?? 'Sample Product' }}</strong><br>
-                                                    <small class="text-muted">{{ $item->product->description ?? 'Product description' }}</small>
+                                                    <strong>{{ $item->product_name }}</strong><br>
+                                                    <small class="text-muted">{{ $item->product_description }}</small>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td><code>{{ $item->product->sku ?? 'SKU-001' }}</code></td>
-                                        <td>{{ $item->quantity ?? 2 }}</td>
-                                        <td>${{ number_format($item->price ?? 599.99, 2) }}</td>
-                                        <td>${{ number_format($item->discount ?? 0, 2) }}</td>
-                                        <td><strong>${{ number_format($item->total ?? 1199.98, 2) }}</strong></td>
+                                        <td><code>{{ $item->product_sku }}</code></td>
+                                        <td>{{ $item->quantity }}</td>
+                                        <td>₹{{ number_format($item->price, 2) }}</td>
+                                        <td>₹{{ number_format($item->discount, 2) }}</td>
+                                        <td><strong>₹{{ number_format($item->total, 2) }}</strong></td>
                                     </tr>
                                     @endforeach
                                 @else
                                     <tr>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <div class="product-image me-2">
-                                                    <div class="placeholder-image">
-                                                        <i class="fas fa-cube"></i>
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <strong>Sample Product A</strong><br>
-                                                    <small class="text-muted">High-quality sample product</small>
-                                                </div>
-                                            </div>
+                                        <td colspan="6" class="text-center py-4">
+                                            <i class="fas fa-box-open fa-2x text-muted mb-2"></i>
+                                            <p class="text-muted mb-0">No items found in this order</p>
                                         </td>
-                                        <td><code>SKU-001</code></td>
-                                        <td>2</td>
-                                        <td>$599.99</td>
-                                        <td>$0.00</td>
-                                        <td><strong>$1,199.98</strong></td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <div class="product-image me-2">
-                                                    <div class="placeholder-image">
-                                                        <i class="fas fa-cube"></i>
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <strong>Sample Product B</strong><br>
-                                                    <small class="text-muted">Premium sample product</small>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td><code>SKU-002</code></td>
-                                        <td>1</td>
-                                        <td>$99.99</td>
-                                        <td>$0.00</td>
-                                        <td><strong>$99.99</strong></td>
                                     </tr>
                                 @endif
                             </tbody>
@@ -278,19 +278,19 @@
                             <table class="table table-sm">
                                 <tr>
                                     <td><strong>Subtotal:</strong></td>
-                                    <td class="text-end">${{ number_format($order->subtotal ?? 1299.97, 2) }}</td>
+                                    <td class="text-end">₹{{ number_format($order->subtotal, 2) }}</td>
                                 </tr>
                                 <tr>
                                     <td><strong>Discount:</strong></td>
-                                    <td class="text-end text-success">-${{ number_format($order->discount ?? 0, 2) }}</td>
+                                    <td class="text-end text-success">-₹{{ number_format($order->discount, 2) }}</td>
                                 </tr>
                                 <tr>
-                                    <td><strong>Tax (8%):</strong></td>
-                                    <td class="text-end">${{ number_format($order->tax ?? 103.98, 2) }}</td>
+                                    <td><strong>Tax:</strong></td>
+                                    <td class="text-end">₹{{ number_format($order->tax, 2) }}</td>
                                 </tr>
                                 <tr class="table-primary">
                                     <td><strong>Total:</strong></td>
-                                    <td class="text-end"><strong>${{ number_format($order->total ?? 1403.95, 2) }}</strong></td>
+                                    <td class="text-end"><strong>₹{{ number_format($order->total_amount, 2) }}</strong></td>
                                 </tr>
                             </table>
                         </div>
@@ -306,8 +306,8 @@
                             <h5 class="card-title mb-0">Order Notes</h5>
                         </div>
                         <div class="card-body">
-                            @if($order->notes ?? 'Customer requested expedited shipping. Handle with care.')
-                                <p class="mb-0">{{ $order->notes ?? 'Customer requested expedited shipping. Handle with care.' }}</p>
+                            @if($order->notes)
+                                <p class="mb-0">{{ $order->notes }}</p>
                             @else
                                 <p class="text-muted mb-0">No notes for this order.</p>
                             @endif
@@ -327,37 +327,51 @@
                                     <div class="timeline-marker bg-success"></div>
                                     <div class="timeline-content">
                                         <h6 class="mb-1">Order Created</h6>
-                                        <small class="text-muted">{{ formatDate($order->created_at, 'Jan 15, 2024 10:30 AM') }}</small>
+                                        <small class="text-muted">{{ formatDate($order->created_at) }}</small>
                                     </div>
                                 </div>
+                                @if($order->payment_status === 'paid' || $order->payment_status === 'partial')
                                 <div class="timeline-item">
                                     <div class="timeline-marker bg-primary"></div>
                                     <div class="timeline-content">
                                         <h6 class="mb-1">Payment Received</h6>
-                                        <small class="text-muted">{{ formatDate($order->updated_at, 'Jan 15, 2024 10:35 AM') }}</small>
+                                        <small class="text-muted">{{ formatDate($order->updated_at) }}</small>
                                     </div>
                                 </div>
+                                @endif
+                                @if($order->status === 'in_progress' || $order->status === 'completed')
                                 <div class="timeline-item">
                                     <div class="timeline-marker bg-warning"></div>
                                     <div class="timeline-content">
                                         <h6 class="mb-1">Processing Started</h6>
-                                        <small class="text-muted">Jan 15, 2024 2:15 PM</small>
+                                        <small class="text-muted">{{ formatDate($order->updated_at) }}</small>
                                     </div>
                                 </div>
+                                @endif
+                                @if($order->status === 'completed')
+                                <div class="timeline-item">
+                                    <div class="timeline-marker bg-success"></div>
+                                    <div class="timeline-content">
+                                        <h6 class="mb-1">Order Completed</h6>
+                                        <small class="text-muted">{{ formatDate($order->updated_at) }}</small>
+                                    </div>
+                                </div>
+                                @else
                                 <div class="timeline-item">
                                     <div class="timeline-marker bg-light"></div>
                                     <div class="timeline-content">
-                                        <h6 class="mb-1 text-muted">Shipping</h6>
+                                        <h6 class="mb-1 text-muted">Processing</h6>
                                         <small class="text-muted">Pending</small>
                                     </div>
                                 </div>
                                 <div class="timeline-item">
                                     <div class="timeline-marker bg-light"></div>
                                     <div class="timeline-content">
-                                        <h6 class="mb-1 text-muted">Delivered</h6>
+                                        <h6 class="mb-1 text-muted">Completed</h6>
                                         <small class="text-muted">Pending</small>
                                     </div>
                                 </div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -412,9 +426,8 @@
                         <label for="status" class="form-label">Status</label>
                         <select class="form-select" id="status" name="status" required>
                             <option value="pending">Pending</option>
-                            <option value="processing">Processing</option>
-                            <option value="shipped">Shipped</option>
-                            <option value="delivered">Delivered</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="in_progress">In Progress</option>
                             <option value="completed">Completed</option>
                             <option value="cancelled">Cancelled</option>
                         </select>
@@ -452,6 +465,7 @@
                         <select class="form-select" id="payment_method_new" name="payment_method">
                             <option value="cash">Cash</option>
                             <option value="card">Credit/Debit Card</option>
+                            <option value="upi">UPI</option>
                             <option value="bank_transfer">Bank Transfer</option>
                             <option value="check">Check</option>
                         </select>
@@ -545,7 +559,7 @@
 $(document).ready(function() {
     // Update Status
     window.updateStatus = function() {
-        $('#status').val('{{ $order->status ?? "pending" }}');
+        $('#status').val('{{ $order->status }}');
         $('#statusModal').modal('show');
     };
 
@@ -559,7 +573,7 @@ $(document).ready(function() {
         };
 
         $.ajax({
-            url: '{{ route("orders.update-status", $order->id ?? 1) }}',
+            url: '{{ route("orders.update-status", $order->id) }}',
             method: 'POST',
             data: formData,
             success: function(response) {
@@ -574,7 +588,7 @@ $(document).ready(function() {
 
     // Record Payment
     window.recordPayment = function() {
-        const balance = {{ ($order->total ?? 1299.99) - ($order->paid_amount ?? 0) }};
+        const balance = {{ $order->total_amount - $order->paid_amount }};
         $('#payment_amount').val(balance.toFixed(2));
         $('#paymentModal').modal('show');
     };
@@ -590,7 +604,7 @@ $(document).ready(function() {
         };
 
         $.ajax({
-            url: '{{ route("orders.record-payment", $order->id ?? 1) }}',
+            url: '{{ route("orders.record-payment", $order->id) }}',
             method: 'POST',
             data: formData,
             success: function(response) {
@@ -606,14 +620,14 @@ $(document).ready(function() {
     // Other actions
     window.duplicateOrder = function() {
         if (confirm('Create a duplicate of this order?')) {
-            window.location.href = '{{ route("orders.duplicate", $order->id ?? 1) }}';
+            window.location.href = '{{ route("orders.duplicate", $order->id) }}';
         }
     };
 
     window.cancelOrder = function() {
         if (confirm('Are you sure you want to cancel this order? This action cannot be undone.')) {
             $.ajax({
-                url: '{{ route("orders.cancel", $order->id ?? 1) }}',
+                url: '{{ route("orders.cancel", $order->id) }}',
                 method: 'POST',
                 data: { _token: '{{ csrf_token() }}' },
                 success: function(response) {
@@ -624,12 +638,12 @@ $(document).ready(function() {
     };
 
     window.printOrder = function() {
-        window.open('{{ route("orders.print", $order->id ?? 1) }}', '_blank');
+        window.open('{{ route("orders.print", $order->id) }}', '_blank');
     };
 
     window.emailOrder = function() {
         $.ajax({
-            url: '{{ route("orders.email", $order->id ?? 1) }}',
+            url: '{{ route("orders.email", $order->id) }}',
             method: 'POST',
             data: { _token: '{{ csrf_token() }}' },
             success: function(response) {
@@ -642,7 +656,7 @@ $(document).ready(function() {
         const tracking = prompt('Enter tracking number:');
         if (tracking) {
             $.ajax({
-                url: '{{ route("orders.add-tracking", $order->id ?? 1) }}',
+                url: '{{ route("orders.add-tracking", $order->id) }}',
                 method: 'POST',
                 data: {
                     tracking_number: tracking,
@@ -658,7 +672,7 @@ $(document).ready(function() {
 
     window.sendNotification = function() {
         $.ajax({
-            url: '{{ route("orders.notify", $order->id ?? 1) }}',
+            url: '{{ route("orders.notify", $order->id) }}',
             method: 'POST',
             data: { _token: '{{ csrf_token() }}' },
             success: function(response) {
@@ -668,7 +682,7 @@ $(document).ready(function() {
     };
 
     window.generateInvoice = function() {
-        window.open('{{ route("orders.invoice", $order->id ?? 1) }}', '_blank');
+        window.open('{{ route("orders.invoice", $order->id) }}', '_blank');
     };
 });
 </script>

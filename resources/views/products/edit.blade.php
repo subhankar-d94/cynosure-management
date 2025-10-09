@@ -2,6 +2,10 @@
 
 @section('title', 'Edit Product - ' . $product->name)
 
+@php
+use Illuminate\Support\Facades\Storage;
+@endphp
+
 @section('breadcrumb')
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
@@ -35,7 +39,7 @@
         </div>
     </div>
 
-    <form id="productForm" class="needs-validation" novalidate>
+    <form id="productForm" class="needs-validation" novalidate enctype="multipart/form-data">
         @csrf
         @method('PUT')
         <div class="row">
@@ -348,11 +352,24 @@
                             <div class="form-text">Upload new product images</div>
                         </div>
                         <div id="imagePreview" class="row g-2">
-                            <!-- Existing images would be loaded here -->
+                            @if($product->hasImages())
+                                @foreach($product->images as $index => $imagePath)
+                                <div class="col-6">
+                                    <div class="position-relative">
+                                        <img src="{{ Storage::url($imagePath) }}" class="img-thumbnail" style="width: 100%; height: 80px; object-fit: cover;">
+                                        <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0"
+                                                onclick="removeExistingImage('{{ $imagePath }}', {{ $index }})" style="margin: 2px;">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                @endforeach
+                            @else
                             <div class="col-12 text-center py-3">
                                 <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
                                 <p class="text-muted small mb-0 mt-2">No images uploaded</p>
                             </div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -466,6 +483,11 @@ function updateProduct() {
     for (let i = 0; i < images.length; i++) {
         formData.append('product_images[]', images[i]);
     }
+
+    // Handle images to remove
+    imagesToRemove.forEach(imagePath => {
+        formData.append('images_to_remove[]', imagePath);
+    });
 
     // Show loading state
     const submitBtn = $('#productForm button[type="submit"]');
@@ -593,6 +615,28 @@ function removeImage(index) {
 
 function uploadImages() {
     $('#product_images').click();
+}
+
+let imagesToRemove = [];
+
+function removeExistingImage(imagePath, index) {
+    // Add to removal list
+    imagesToRemove.push(imagePath);
+
+    // Remove from display
+    const imageContainer = event.target.closest('.col-6');
+    imageContainer.remove();
+
+    // Check if no images left
+    const preview = document.getElementById('imagePreview');
+    if (preview.children.length === 0) {
+        preview.innerHTML = `
+            <div class="col-12 text-center py-3">
+                <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
+                <p class="text-muted small mb-0 mt-2">No images uploaded</p>
+            </div>
+        `;
+    }
 }
 
 function showAlert(message, type) {

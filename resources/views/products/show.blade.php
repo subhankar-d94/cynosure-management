@@ -2,6 +2,10 @@
 
 @section('title', 'Product Details - ' . $product->name)
 
+@php
+use Illuminate\Support\Facades\Storage;
+@endphp
+
 @section('breadcrumb')
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
@@ -299,7 +303,18 @@
                 </div>
                 <div class="card-body">
                     <div id="productImages" class="row g-2">
-                        <!-- Placeholder for now - in production, you'd load actual images -->
+                        @if($product->hasImages())
+                            @foreach($product->images as $imagePath)
+                            <div class="col-md-4 col-6">
+                                <div class="position-relative">
+                                    <img src="{{ Storage::url($imagePath) }}"
+                                         class="img-thumbnail w-100"
+                                         style="height: 150px; object-fit: cover;"
+                                         onclick="showImageModal('{{ Storage::url($imagePath) }}')">
+                                </div>
+                            </div>
+                            @endforeach
+                        @else
                         <div class="col-12 text-center py-4">
                             <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
                             <p class="mt-2 text-muted">No images uploaded</p>
@@ -307,6 +322,7 @@
                                 Upload Images
                             </button>
                         </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -483,8 +499,33 @@ function setupInventory() {
 }
 
 function uploadImages() {
-    // Implementation for image upload
-    showAlert('Image upload feature coming soon', 'info');
+    // Redirect to edit page for image upload
+    window.location.href = '{{ route("products.edit", $product) }}';
+}
+
+function showImageModal(imageUrl) {
+    const modal = `
+        <div class="modal fade" id="imageModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Product Image</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <img src="${imageUrl}" class="img-fluid" alt="Product Image">
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Remove existing modal
+    $('#imageModal').remove();
+
+    // Add new modal and show it
+    $('body').append(modal);
+    $('#imageModal').modal('show');
 }
 
 function generateQRCode() {

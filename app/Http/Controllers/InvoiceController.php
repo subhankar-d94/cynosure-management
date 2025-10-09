@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 
@@ -564,7 +563,7 @@ class InvoiceController extends Controller
                     'invoices.issue_date',
                     'invoices.due_date',
                     'invoices.status',
-                    'invoices.total_amount as total',
+                    'invoices.total',
                     'invoices.paid_amount',
                     'invoices.created_at',
                     'customers.name as customer_name',

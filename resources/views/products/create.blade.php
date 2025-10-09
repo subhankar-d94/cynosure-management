@@ -31,7 +31,7 @@
         </div>
     </div>
 
-    <form id="productForm" class="needs-validation" novalidate>
+    <form id="productForm" class="needs-validation" novalidate enctype="multipart/form-data">
         @csrf
         <div class="row">
             <!-- Main Product Information -->

@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\Supplier;
+use App\Services\ImageUploadService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -85,7 +86,9 @@ class ProductController extends Controller
             'initial_stock' => 'nullable|integer|min:0',
             'reorder_level' => 'nullable|integer|min:0',
             'cost_per_unit' => 'nullable|numeric|min:0',
-            'supplier_id' => 'nullable|exists:suppliers,id'
+            'supplier_id' => 'nullable|exists:suppliers,id',
+            'product_images' => 'nullable|array',
+            'product_images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
         if ($validator->fails()) {
@@ -108,6 +111,15 @@ class ProductController extends Controller
                 'is_customizable' => $request->boolean('is_customizable'),
                 'sku' => $request->sku
             ]);
+
+            // Handle image uploads
+            if ($request->hasFile('product_images')) {
+                $imageUploadService = new ImageUploadService();
+                $uploadedImages = $imageUploadService->uploadProductImages($request->file('product_images'), $product->id);
+                if (!empty($uploadedImages)) {
+                    $product->update(['images' => $uploadedImages]);
+                }
+            }
 
             if ($request->has('initial_stock') || $request->has('cost_per_unit')) {
                 Inventory::create([
@@ -185,7 +197,11 @@ class ProductController extends Controller
             'dimensions.width' => 'nullable|numeric|min:0',
             'dimensions.height' => 'nullable|numeric|min:0',
             'is_customizable' => 'boolean',
-            'sku' => 'required|string|max:50|unique:products,sku,' . $product->id
+            'sku' => 'required|string|max:50|unique:products,sku,' . $product->id,
+            'product_images' => 'nullable|array',
+            'product_images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'images_to_remove' => 'nullable|array',
+            'images_to_remove.*' => 'string'
         ]);
 
         if ($validator->fails()) {
@@ -206,6 +222,26 @@ class ProductController extends Controller
                 'is_customizable' => $request->boolean('is_customizable'),
                 'sku' => $request->sku
             ]);
+
+            // Handle image operations
+            $imageUploadService = new ImageUploadService();
+            $currentImages = $product->images ?? [];
+
+            // Remove specified images
+            if ($request->has('images_to_remove')) {
+                $imagesToRemove = $request->input('images_to_remove');
+                $imageUploadService->deleteImages($imagesToRemove);
+                $currentImages = array_diff($currentImages, $imagesToRemove);
+            }
+
+            // Add new images
+            if ($request->hasFile('product_images')) {
+                $uploadedImages = $imageUploadService->uploadProductImages($request->file('product_images'), $product->id);
+                $currentImages = array_merge($currentImages, $uploadedImages);
+            }
+
+            // Update product with current images
+            $product->update(['images' => array_values($currentImages)]);
 
             return response()->json([
                 'success' => true,

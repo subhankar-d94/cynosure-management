@@ -21,6 +21,7 @@ class Product extends Model
         'dimensions',
         'is_customizable',
         'sku',
+        'images',
     ];
 
     protected $casts = [
@@ -28,6 +29,7 @@ class Product extends Model
         'weight' => 'decimal:3',
         'dimensions' => 'array',
         'is_customizable' => 'boolean',
+        'images' => 'array',
     ];
 
     public function category(): BelongsTo
@@ -48,5 +50,26 @@ class Product extends Model
     public function scopeCustomizable($query)
     {
         return $query->where('is_customizable', true);
+    }
+
+    public function getImagesAttribute($value)
+    {
+        return $value ? json_decode($value, true) : [];
+    }
+
+    public function setImagesAttribute($value)
+    {
+        $this->attributes['images'] = $value ? json_encode($value) : null;
+    }
+
+    public function getFirstImageAttribute()
+    {
+        $images = $this->images;
+        return !empty($images) ? $images[0] : null;
+    }
+
+    public function hasImages()
+    {
+        return !empty($this->images);
     }
 }
