@@ -160,10 +160,6 @@
                                             <span>Discount:</span>
                                             <span id="total_discount">$0.00</span>
                                         </div>
-                                        <div class="d-flex justify-content-between">
-                                            <span>Tax:</span>
-                                            <span id="tax_amount">$0.00</span>
-                                        </div>
                                         <hr>
                                         <div class="d-flex justify-content-between fw-bold">
                                             <span>Total:</span>
@@ -173,7 +169,6 @@
                                         <!-- Hidden fields for totals -->
                                         <input type="hidden" id="subtotal_input" name="subtotal" value="0">
                                         <input type="hidden" id="discount_input" name="discount" value="0">
-                                        <input type="hidden" id="tax_input" name="tax" value="0">
                                         <input type="hidden" id="total_input" name="total" value="0">
                                     </div>
                                 </div>
@@ -191,6 +186,7 @@
                                     <select class="form-select" id="payment_method" name="payment_method">
                                         <option value="cash">Cash</option>
                                         <option value="card">Credit/Debit Card</option>
+                                        <option value="upi">UPI</option>
                                         <option value="bank_transfer">Bank Transfer</option>
                                         <option value="check">Check</option>
                                         <option value="credit">Store Credit</option>
@@ -301,7 +297,6 @@
 <script>
 $(document).ready(function() {
     let itemCounter = 0;
-    const taxRate = 0.08; // 8% tax rate
 
     // Customer type change handler
     $('#customer_type').change(function() {
@@ -455,17 +450,14 @@ $(document).ready(function() {
             totalDiscount += parseFloat($(this).val()) || 0;
         });
 
-        const tax = subtotal * taxRate;
-        const grandTotal = subtotal + tax;
+        const grandTotal = subtotal - totalDiscount;
 
         $('#subtotal').text(`$${subtotal.toFixed(2)}`);
         $('#total_discount').text(`$${totalDiscount.toFixed(2)}`);
-        $('#tax_amount').text(`$${tax.toFixed(2)}`);
         $('#grand_total').text(`$${grandTotal.toFixed(2)}`);
 
         $('#subtotal_input').val(subtotal);
         $('#discount_input').val(totalDiscount);
-        $('#tax_input').val(tax);
         $('#total_input').val(grandTotal);
     }
 
@@ -541,7 +533,6 @@ $(document).ready(function() {
                     <h6>Order Summary</h6>
                     <p><strong>Subtotal:</strong> ${$('#subtotal').text()}</p>
                     <p><strong>Discount:</strong> ${$('#total_discount').text()}</p>
-                    <p><strong>Tax:</strong> ${$('#tax_amount').text()}</p>
                     <p><strong>Total:</strong> ${$('#grand_total').text()}</p>
                 </div>
             </div>

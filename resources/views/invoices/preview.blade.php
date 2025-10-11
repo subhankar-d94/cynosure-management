@@ -312,7 +312,7 @@
                         <tr>
                             <td>
                                 <strong>{{ $item->description ?? 'Sample Service' }}</strong>
-                                @if($item->details)
+                                @if(isset($item->details) && $item->details)
                                 <br><small class="text-muted">{{ $item->details }}</small>
                                 @endif
                             </td>

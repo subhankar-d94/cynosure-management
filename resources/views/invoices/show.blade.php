@@ -109,7 +109,7 @@ function formatDateOnly($date, $default = 'N/A') {
                         </div>
                         <div class="col-md-3">
                             <strong>Total Amount:</strong><br>
-                            <h5 class="text-primary mb-0">₹{{ number_format($invoice->total ?? 1299.99, 2) }}</h5>
+                            <h5 class="text-primary mb-0">₹{{ number_format((float)($invoice->total ?? 0), 2) }}</h5>
                         </div>
                     </div>
                 </div>
@@ -122,51 +122,54 @@ function formatDateOnly($date, $default = 'N/A') {
                     <div class="card mb-4">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="card-title mb-0">Bill To</h5>
-                            @if(isset($invoice->customer))
-                            <a href="{{ route('customers.show', $invoice->customer->id) }}" class="btn btn-sm btn-outline-primary">
-                                View Customer
-                            </a>
-                            @endif
                         </div>
                         <div class="card-body">
-                            @if(isset($invoice->customer))
+                            @php
+                                // Get customer name from relationship or invoice fields
+                                $customerName = $invoice->customer_name ?? ($invoice->custom_name ?? null);
+                                $customerEmail = $invoice->customer_email ?? ($invoice->custom_email ?? null);
+                                $customerPhone = $invoice->customer_phone ?? null;
+                                $customerCompany = $invoice->customer_company ?? null;
+                                $customerAddress = $invoice->customer_address ?? ($invoice->billing_address ?? null);
+
+                                // If we have a customer_id, show link to customer profile
+                                $hasCustomerProfile = isset($invoice->customer_id) && $invoice->customer_id;
+                            @endphp
+
                             <div class="d-flex align-items-start">
+                                @if($customerName)
                                 <div class="avatar-circle me-3">
-                                    {{ strtoupper(substr($invoice->customer->name, 0, 2)) }}
+                                    {{ strtoupper(substr($customerName, 0, 2)) }}
                                 </div>
+                                @endif
                                 <div>
-                                    <h6 class="mb-1">{{ $invoice->customer->name }}</h6>
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <h6 class="mb-0">{{ $customerName ?? 'Customer Name Not Available' }}</h6>
+                                        @if($hasCustomerProfile)
+                                        <a href="{{ route('customers.show', $invoice->customer_id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-external-link-alt"></i> View Profile
+                                        </a>
+                                        @endif
+                                    </div>
                                     <p class="text-muted mb-2">
-                                        @if($invoice->customer->company)
-                                        <strong>{{ $invoice->customer->company }}</strong><br>
+                                        @if($customerCompany)
+                                        <strong>{{ $customerCompany }}</strong><br>
                                         @endif
-                                        <i class="fas fa-envelope"></i> {{ $invoice->customer->email }}<br>
-                                        @if($invoice->customer->phone)
-                                        <i class="fas fa-phone"></i> {{ $invoice->customer->phone }}<br>
+                                        @if($customerEmail)
+                                        <i class="fas fa-envelope"></i> {{ $customerEmail }}<br>
                                         @endif
-                                        @if($invoice->billing_address)
-                                        <i class="fas fa-map-marker-alt"></i> {{ $invoice->billing_address }}
+                                        @if($customerPhone)
+                                        <i class="fas fa-phone"></i> {{ $customerPhone }}<br>
+                                        @endif
+                                        @if($customerAddress)
+                                        <i class="fas fa-map-marker-alt"></i> {{ $customerAddress }}
+                                        @endif
+                                        @if(!$customerEmail && !$customerPhone && !$customerAddress)
+                                        <em class="text-muted">No contact information available</em>
                                         @endif
                                     </p>
                                 </div>
                             </div>
-                            @else
-                            <div>
-                                <h6 class="mb-1">{{ $invoice->customer_name ?? 'Sample Customer' }}</h6>
-                                <p class="text-muted mb-0">
-                                    @if($invoice->customer_company ?? 'Sample Company')
-                                    <strong>{{ $invoice->customer_company ?? 'Sample Company' }}</strong><br>
-                                    @endif
-                                    <i class="fas fa-envelope"></i> {{ $invoice->customer_email ?? 'customer@example.com' }}<br>
-                                    @if($invoice->customer_phone ?? '(555) 123-4567')
-                                    <i class="fas fa-phone"></i> {{ $invoice->customer_phone ?? '(555) 123-4567' }}<br>
-                                    @endif
-                                    @if($invoice->billing_address ?? '123 Customer Street, City, State 12345')
-                                    <i class="fas fa-map-marker-alt"></i> {{ $invoice->billing_address ?? '123 Customer Street, City, State 12345' }}
-                                    @endif
-                                </p>
-                            </div>
-                            @endif
                         </div>
                     </div>
 
@@ -174,7 +177,7 @@ function formatDateOnly($date, $default = 'N/A') {
                     <div class="card mb-4">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="card-title mb-0">Invoice Items</h5>
-                            <span class="badge bg-primary">{{ $invoice->items->count() ?? 3 }} Items</span>
+                            <span class="badge bg-primary">{{ (isset($invoice->items) && is_countable($invoice->items)) ? count($invoice->items) : 0 }} Items</span>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
@@ -189,7 +192,7 @@ function formatDateOnly($date, $default = 'N/A') {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @if(isset($invoice->items) && $invoice->items->count() > 0)
+                                        @if(isset($invoice->items) && (is_countable($invoice->items) ? count($invoice->items) : 0) > 0)
                                             @foreach($invoice->items as $item)
                                             <tr>
                                                 <td>
@@ -200,36 +203,18 @@ function formatDateOnly($date, $default = 'N/A') {
                                                         @endif
                                                     </div>
                                                 </td>
-                                                <td class="text-center">{{ $item->quantity ?? 2 }}</td>
-                                                <td class="text-end">₹{{ number_format($item->rate ?? 599.99, 2) }}</td>
-                                                <td class="text-center">{{ $item->tax_rate ?? 8 }}%</td>
-                                                <td class="text-end"><strong>₹{{ number_format($item->amount ?? 1295.98, 2) }}</strong></td>
+                                                <td class="text-center">{{ number_format((float)($item->quantity ?? 0), 3) }}</td>
+                                                <td class="text-end">₹{{ number_format((float)($item->rate ?? 0), 2) }}</td>
+                                                <td class="text-center">{{ number_format((float)($item->tax_rate ?? 0), 2) }}%</td>
+                                                <td class="text-end"><strong>₹{{ number_format((float)($item->amount ?? 0), 2) }}</strong></td>
                                             </tr>
                                             @endforeach
                                         @else
                                             <tr>
-                                                <td>
-                                                    <div>
-                                                        <strong>Professional Services</strong>
-                                                        <br><small class="text-muted">Consulting and development work</small>
-                                                    </div>
+                                                <td colspan="5" class="text-center text-muted py-4">
+                                                    <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                                    No items found for this invoice
                                                 </td>
-                                                <td class="text-center">10</td>
-                                                <td class="text-end">$125.00</td>
-                                                <td class="text-center">8%</td>
-                                                <td class="text-end"><strong>$1,350.00</strong></td>
-                                            </tr>
-                                            <tr>
-                                                <td>
-                                                    <div>
-                                                        <strong>Software License</strong>
-                                                        <br><small class="text-muted">Annual subscription</small>
-                                                    </div>
-                                                </td>
-                                                <td class="text-center">1</td>
-                                                <td class="text-end">$500.00</td>
-                                                <td class="text-center">0%</td>
-                                                <td class="text-end"><strong>$500.00</strong></td>
                                             </tr>
                                         @endif
                                     </tbody>
@@ -242,7 +227,7 @@ function formatDateOnly($date, $default = 'N/A') {
                                     <table class="table table-sm">
                                         <tr>
                                             <td><strong>Subtotal:</strong></td>
-                                            <td class="text-end">₹{{ number_format($invoice->subtotal ?? 1850.00, 2) }}</td>
+                                            <td class="text-end">₹{{ number_format((float)($invoice->subtotal ?? 0), 2) }}</td>
                                         </tr>
                                         @if(($invoice->discount ?? 0) > 0)
                                         <tr>
@@ -252,11 +237,11 @@ function formatDateOnly($date, $default = 'N/A') {
                                         @endif
                                         <tr>
                                             <td><strong>Tax:</strong></td>
-                                            <td class="text-end">₹{{ number_format($invoice->tax_amount ?? 108.00, 2) }}</td>
+                                            <td class="text-end">₹{{ number_format((float)($invoice->tax_amount ?? 0), 2) }}</td>
                                         </tr>
                                         <tr class="table-primary">
                                             <td><strong>Total:</strong></td>
-                                            <td class="text-end"><strong>₹{{ number_format($invoice->total ?? 1958.00, 2) }}</strong></td>
+                                            <td class="text-end"><strong>₹{{ number_format((float)($invoice->total ?? 0), 2) }}</strong></td>
                                         </tr>
                                     </table>
                                 </div>
@@ -317,17 +302,17 @@ function formatDateOnly($date, $default = 'N/A') {
                             <div class="row">
                                 <div class="col-sm-6">
                                     <strong>Total Amount:</strong><br>
-                                    <span class="h5 text-primary">₹{{ number_format($invoice->total ?? 1958.00, 2) }}</span>
+                                    <span class="h5 text-primary">₹{{ number_format((float)($invoice->total ?? 0), 2) }}</span>
                                 </div>
                                 <div class="col-sm-6">
                                     <strong>Amount Paid:</strong><br>
-                                    <span class="h5 text-success">₹{{ number_format($invoice->paid_amount ?? 0, 2) }}</span>
+                                    <span class="h5 text-success">₹{{ number_format((float)($invoice->paid_amount ?? 0), 2) }}</span>
                                 </div>
                             </div>
-                            @if(($invoice->total ?? 1958.00) > ($invoice->paid_amount ?? 0))
+                            @if((float)($invoice->total ?? 0) > (float)($invoice->paid_amount ?? 0))
                             <div class="mt-3">
                                 <div class="alert alert-warning">
-                                    <strong>Balance Due:</strong> ₹{{ number_format(($invoice->total ?? 1958.00) - ($invoice->paid_amount ?? 0), 2) }}
+                                    <strong>Balance Due:</strong> ₹{{ number_format((float)($invoice->total ?? 0) - (float)($invoice->paid_amount ?? 0), 2) }}
                                 </div>
                                 @if(($invoice->status ?? 'draft') !== 'paid')
                                 <button type="button" class="btn btn-success btn-sm w-100" onclick="markAsPaid()">
@@ -358,7 +343,7 @@ function formatDateOnly($date, $default = 'N/A') {
                                     <div class="timeline-marker bg-primary"></div>
                                     <div class="timeline-content">
                                         <h6 class="mb-1">Invoice Sent</h6>
-                                        <small class="text-muted">{{ $invoice->sent_at ?? 'Jan 15, 2024 11:00 AM' }}</small>
+                                        <small class="text-muted">{{ formatDate($invoice->sent_at ?? null, 'Not available') }}</small>
                                     </div>
                                 </div>
                                 @endif
@@ -367,7 +352,7 @@ function formatDateOnly($date, $default = 'N/A') {
                                     <div class="timeline-marker bg-info"></div>
                                     <div class="timeline-content">
                                         <h6 class="mb-1">Invoice Viewed</h6>
-                                        <small class="text-muted">{{ $invoice->viewed_at ?? 'Jan 16, 2024 9:15 AM' }}</small>
+                                        <small class="text-muted">{{ formatDate($invoice->viewed_at ?? null, 'Not available') }}</small>
                                     </div>
                                 </div>
                                 @endif
@@ -376,7 +361,7 @@ function formatDateOnly($date, $default = 'N/A') {
                                     <div class="timeline-marker bg-success"></div>
                                     <div class="timeline-content">
                                         <h6 class="mb-1">Payment Received</h6>
-                                        <small class="text-muted">{{ $invoice->paid_at ?? 'Jan 18, 2024 2:30 PM' }}</small>
+                                        <small class="text-muted">{{ formatDate($invoice->paid_at ?? null, 'Not available') }}</small>
                                     </div>
                                 </div>
                                 @else
@@ -433,18 +418,18 @@ function formatDateOnly($date, $default = 'N/A') {
                     <div class="mb-3">
                         <label for="recipientEmail" class="form-label">Recipient Email</label>
                         <input type="email" class="form-control" id="recipientEmail"
-                               value="{{ $invoice->customer->email ?? $invoice->customer_email ?? '' }}" required>
+                               value="{{ $invoice->customer_email ?? ($invoice->custom_email ?? '') }}" required>
                     </div>
                     <div class="mb-3">
                         <label for="emailSubject" class="form-label">Subject</label>
                         <input type="text" class="form-control" id="emailSubject"
-                               value="Invoice {{ $invoice->invoice_number ?? 'INV-2024-12345' }} from Your Company">
+                               value="Invoice {{ $invoice->invoice_number ?? 'Unknown' }} from Your Company">
                     </div>
                     <div class="mb-3">
                         <label for="emailMessage" class="form-label">Message</label>
-                        <textarea class="form-control" id="emailMessage" rows="4">Dear {{ $invoice->customer->name ?? $invoice->customer_name ?? 'Customer' }},
+                        <textarea class="form-control" id="emailMessage" rows="4">Dear {{ $invoice->customer_name ?? ($invoice->custom_name ?? 'Customer') }},
 
-Please find attached your invoice. Payment is due by {{ formatDateOnly($invoice->due_date ?? null, 'Feb 15, 2024') }}.
+Please find attached your invoice. Payment is due by {{ formatDateOnly($invoice->due_date ?? null, 'the due date specified') }}.
 
 Thank you for your business!
 

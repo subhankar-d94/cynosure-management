@@ -165,6 +165,7 @@
                     <select class="form-select" id="statusFilter">
                         <option value="">All Statuses</option>
                         <option value="draft">Draft</option>
+                        <option value="generated">Generated</option>
                         <option value="sent">Sent</option>
                         <option value="viewed">Viewed</option>
                         <option value="paid">Paid</option>
@@ -512,6 +513,7 @@ $(document).ready(function() {
     function getStatusBadge(status) {
         const badges = {
             'draft': '<span class="badge bg-secondary">Draft</span>',
+            'generated': '<span class="badge bg-warning">Generated</span>',
             'sent': '<span class="badge bg-primary">Sent</span>',
             'viewed': '<span class="badge bg-info">Viewed</span>',
             'paid': '<span class="badge bg-success">Paid</span>',

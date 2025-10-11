@@ -25,6 +25,11 @@ class InvoiceController extends Controller
                 return $this->exportInvoices($request);
             }
 
+            // If request has pagination/filter parameters, return JSON data
+            if ($request->has(['page', 'status', 'date_from', 'date_to', 'search', 'sort', 'direction'])) {
+                return $this->getInvoicesData($request);
+            }
+
             // Get statistics for dashboard cards
             $stats = $this->getInvoiceStats();
 
@@ -101,7 +106,7 @@ class InvoiceController extends Controller
                 'discount_type' => $request->discount_type ?? 'fixed',
                 'discount_value' => $request->discount_value ?? 0,
                 'discount' => $request->discount ?? 0,
-                'tax' => $request->tax,
+                'tax_amount' => $request->tax,
                 'total' => $request->total,
                 'paid_amount' => 0,
                 'notes' => $request->notes,
@@ -151,10 +156,10 @@ class InvoiceController extends Controller
                 ]);
             }
 
-            // If status is sent, record sent timestamp
+            // If status is sent, update status
             if ($request->status === 'sent') {
                 DB::table('invoices')->where('id', $invoiceId)->update([
-                    'sent_at' => now(),
+                    'status' => 'sent',
                     'updated_at' => now()
                 ]);
             }
@@ -166,7 +171,6 @@ class InvoiceController extends Controller
                 // Mark as sent and potentially send email
                 DB::table('invoices')->where('id', $invoiceId)->update([
                     'status' => 'sent',
-                    'sent_at' => now(),
                     'updated_at' => now()
                 ]);
 
@@ -201,7 +205,6 @@ class InvoiceController extends Controller
             if ($invoice->status === 'sent') {
                 DB::table('invoices')->where('id', $id)->update([
                     'status' => 'viewed',
-                    'viewed_at' => now(),
                     'updated_at' => now()
                 ]);
                 $invoice->status = 'viewed';
@@ -268,7 +271,7 @@ class InvoiceController extends Controller
                 'discount_type' => $request->discount_type ?? 'fixed',
                 'discount_value' => $request->discount_value ?? 0,
                 'discount' => $request->discount ?? 0,
-                'tax' => $request->tax,
+                'tax_amount' => $request->tax,
                 'total' => $request->total,
                 'notes' => $request->notes,
                 'terms' => $request->terms,
@@ -321,8 +324,7 @@ class InvoiceController extends Controller
             if ($action === 'save_and_send') {
                 DB::table('invoices')->where('id', $id)->update([
                     'status' => 'sent',
-                    'sent_at' => now(),
-                    'updated_at' => now()
+                        'updated_at' => now()
                 ]);
             }
 
@@ -435,7 +437,6 @@ class InvoiceController extends Controller
 
             DB::table('invoices')->where('id', $id)->update([
                 'status' => 'sent',
-                'sent_at' => now(),
                 'updated_at' => now()
             ]);
 
@@ -458,8 +459,8 @@ class InvoiceController extends Controller
 
             DB::table('invoices')->where('id', $id)->update([
                 'status' => 'paid',
+                'payment_status' => 'paid',
                 'paid_amount' => $invoice->total,
-                'paid_at' => now(),
                 'updated_at' => now()
             ]);
 
@@ -476,7 +477,6 @@ class InvoiceController extends Controller
         try {
             DB::table('invoices')->where('id', $id)->update([
                 'status' => 'sent',
-                'sent_at' => now(),
                 'updated_at' => now()
             ]);
 
@@ -508,8 +508,7 @@ class InvoiceController extends Controller
                 case 'send':
                     DB::table('invoices')->whereIn('id', $invoiceIds)->update([
                         'status' => 'sent',
-                        'sent_at' => now(),
-                        'updated_at' => now()
+                                'updated_at' => now()
                     ]);
                     $message = count($invoiceIds) . ' invoices sent successfully';
                     break;
@@ -519,8 +518,8 @@ class InvoiceController extends Controller
                     foreach ($invoices as $invoice) {
                         DB::table('invoices')->where('id', $invoice->id)->update([
                             'status' => 'paid',
+                            'payment_status' => 'paid',
                             'paid_amount' => $invoice->total,
-                            'paid_at' => now(),
                             'updated_at' => now()
                         ]);
                     }
@@ -573,7 +572,7 @@ class InvoiceController extends Controller
                 ]);
 
             // Apply filters
-            if ($request->has('status') && $request->status !== '') {
+            if ($request->has('status') &&  !empty($request->status)) {
                 $query->where('invoices.status', $request->status);
             }
 
@@ -596,10 +595,6 @@ class InvoiceController extends Controller
                 });
             }
 
-            // Auto-mark overdue invoices
-            $today = Carbon::today();
-            $query->leftJoin(DB::raw('(SELECT id, CASE WHEN due_date < "' . $today . '" AND status NOT IN ("paid", "cancelled") THEN "overdue" ELSE status END as computed_status FROM invoices) as status_computed'), 'invoices.id', '=', 'status_computed.id');
-
             // Sorting
             $sortField = $request->get('sort', 'created_at');
             $sortDirection = $request->get('direction', 'desc');
@@ -609,23 +604,32 @@ class InvoiceController extends Controller
                 $query->orderBy("invoices.{$sortField}", $sortDirection);
             }
 
+            // Get total count before applying pagination
+            $total = $query->count();
+
             // Pagination
             $perPage = $request->get('per_page', 15);
             $page = $request->get('page', 1);
             $offset = ($page - 1) * $perPage;
 
-            $total = $query->count();
             $invoices = $query->offset($offset)->limit($perPage)->get();
 
-            // Add computed fields
-            $invoices = $invoices->map(function($invoice) {
+            // Add computed fields and handle overdue status
+            $today = date('Y-m-d');
+
+            $invoices = $invoices->map(function($invoice) use ($today) {
+                // Use customer name from join or custom name
                 $invoice->customer_name = $invoice->customer_name ?: $invoice->custom_name;
                 $invoice->customer_email = $invoice->customer_email ?: $invoice->custom_email;
 
-                // Check if overdue
-                if ($invoice->due_date < date('Y-m-d') && !in_array($invoice->status, ['paid', 'cancelled'])) {
+                // Check if overdue and update status
+                if ($invoice->due_date && $invoice->due_date < $today && !in_array($invoice->status, ['paid', 'cancelled'])) {
                     $invoice->status = 'overdue';
                 }
+
+                // Ensure numeric values are properly formatted
+                $invoice->total = (float) ($invoice->total ?? 0);
+                $invoice->paid_amount = (float) ($invoice->paid_amount ?? 0);
 
                 return $invoice;
             });
