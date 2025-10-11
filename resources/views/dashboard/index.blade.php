@@ -182,7 +182,7 @@
                                 @forelse($recentOrders ?? [] as $order)
                                 <tr>
                                     <td>
-                                        <span class="fw-semibold text-primary">#{{ str_pad($order['id'], 5, '0', STR_PAD_LEFT) }}</span>
+                                        <span class="fw-semibold text-primary">#{{ $order['order_number'] }}</span>
                                     </td>
                                     <td>{{ $order['customer_name'] }}</td>
                                     <td>
@@ -196,9 +196,6 @@
                                         <div class="btn-group btn-group-sm">
                                             <button class="btn btn-outline-primary" onclick="viewOrder({{ $order['id'] }})">
                                                 <i class="bi bi-eye"></i>
-                                            </button>
-                                            <button class="btn btn-outline-success" onclick="processOrder({{ $order['id'] }})">
-                                                <i class="bi bi-check"></i>
                                             </button>
                                         </div>
                                     </td>

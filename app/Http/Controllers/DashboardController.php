@@ -85,6 +85,7 @@ class DashboardController extends Controller
             ->map(function ($order) {
                 return [
                     'id' => $order->id,
+                    'order_number' => $order->order_number,
                     'customer_name' => $order->customer->name,
                     'status' => $order->status,
                     'total_amount' => $order->total_amount,
