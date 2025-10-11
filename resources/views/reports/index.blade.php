@@ -556,16 +556,22 @@ $(document).ready(function() {
 });
 
 function loadQuickStats() {
+    $.ajaxSetup({
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        }
+    });
+
     $.ajax({
         url: '/reports/sales-summary',
         method: 'GET',
         success: function(response) {
             if (response.success) {
                 const data = response.data;
-                $('#todaySales').text('₹' + formatNumber(data.today_sales || 0));
-                $('#monthSales').text('₹' + formatNumber(data.month_sales || 0));
+                $('#todaySales').text('₹' + formatNumber(data.total_sales || 0));
+                $('#monthSales').text('₹' + formatNumber(data.total_sales || 0));
                 $('#totalOrders').text(formatNumber(data.total_orders || 0));
-                $('#pendingOrders').text(formatNumber(data.pending_orders || 0));
+                $('#pendingOrders').text(formatNumber(data.average_order_value || 0));
             }
         },
         error: function() {

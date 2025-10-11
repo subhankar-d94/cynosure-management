@@ -267,6 +267,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/sales/customer', [ReportController::class, 'salesByCustomer'])->name('sales.customer');
         Route::get('/sales/product', [ReportController::class, 'salesByProduct'])->name('sales.product');
         Route::get('/sales/export', [ReportController::class, 'exportSales'])->name('sales.export');
+        Route::get('/sales-summary', [ReportController::class, 'getSalesSummary'])->name('sales-summary');
 
         // Inventory Reports
         Route::get('/inventory', [ReportController::class, 'inventory'])->name('inventory');
