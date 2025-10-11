@@ -152,26 +152,8 @@
 
                             <div class="col-md-4">
                                 <label for="reorder_level" class="form-label">Reorder Level</label>
-                                <input type="number" class="form-control" id="reorder_level" name="reorder_level" min="0" value="10">
+                                <input type="number" class="form-control" id="reorder_level" name="reorder_level" min="0" value="1">
                                 <div class="form-text">Alert when stock reaches this level</div>
-                            </div>
-
-                            <div class="col-md-4">
-                                <label for="cost_per_unit" class="form-label">Cost per Unit (₹)</label>
-                                <input type="number" class="form-control" id="cost_per_unit" name="cost_per_unit" step="0.01" min="0">
-                                <div class="form-text">Cost for inventory valuation</div>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label for="supplier_id" class="form-label">Primary Supplier</label>
-                                <select class="form-select" id="supplier_id" name="supplier_id">
-                                    <option value="">Select Supplier</option>
-                                    @if(isset($suppliers))
-                                        @foreach($suppliers as $supplier)
-                                            <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
-                                        @endforeach
-                                    @endif
-                                </select>
                             </div>
                         </div>
                     </div>

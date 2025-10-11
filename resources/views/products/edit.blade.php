@@ -190,25 +190,6 @@ use Illuminate\Support\Facades\Storage;
                                 <div class="form-text">Alert when stock reaches this level</div>
                             </div>
 
-                            <div class="col-md-4">
-                                <label for="cost_per_unit" class="form-label">Cost per Unit (₹)</label>
-                                <input type="number" class="form-control" id="cost_per_unit" name="cost_per_unit"
-                                       value="{{ old('cost_per_unit', $product->inventory->cost_per_unit) }}" step="0.01" min="0">
-                                <div class="form-text">Cost for inventory valuation</div>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label for="supplier_id" class="form-label">Primary Supplier</label>
-                                <select class="form-select" id="supplier_id" name="supplier_id">
-                                    <option value="">Select Supplier</option>
-                                    @foreach($suppliers as $supplier)
-                                        <option value="{{ $supplier->id }}"
-                                                {{ old('supplier_id', $product->inventory->supplier_id) == $supplier->id ? 'selected' : '' }}>
-                                            {{ $supplier->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
 
                             <div class="col-md-6">
                                 <label class="form-label">Stock Value</label>

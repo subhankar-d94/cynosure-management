@@ -122,7 +122,7 @@ use Illuminate\Support\Facades\Storage;
                 </div>
                 <div class="card-body">
                     <div class="row g-4">
-                        <div class="col-md-3">
+                        <div class="col-md-6">
                             <div class="text-center">
                                 <h3 class="mb-1 {{ $product->inventory->quantity_in_stock <= $product->inventory->reorder_level ? 'text-warning' : 'text-success' }}">
                                     {{ $product->inventory->quantity_in_stock }}
@@ -130,22 +130,10 @@ use Illuminate\Support\Facades\Storage;
                                 <small class="text-muted">Current Stock</small>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-6">
                             <div class="text-center">
                                 <h3 class="mb-1 text-info">{{ $product->inventory->reorder_level }}</h3>
                                 <small class="text-muted">Reorder Level</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="text-center">
-                                <h3 class="mb-1 text-primary">₹{{ number_format($product->inventory->cost_per_unit, 2) }}</h3>
-                                <small class="text-muted">Cost per Unit</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="text-center">
-                                <h3 class="mb-1 text-success">₹{{ number_format($stats['stock_value'], 2) }}</h3>
-                                <small class="text-muted">Stock Value</small>
                             </div>
                         </div>
                     </div>
@@ -225,7 +213,7 @@ use Illuminate\Support\Facades\Storage;
                                     <tr>
                                         <td>
                                             <a href="{{ route('orders.show', $item->order) }}" class="text-decoration-none">
-                                                #{{ $item->order->id }}
+                                                #{{ $item->order->order_number }}
                                             </a>
                                         </td>
                                         <td>{{ $item->order->customer->name }}</td>
