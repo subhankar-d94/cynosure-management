@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Customer Details')
+@section('title', $customer->name . ' - Customer Details')
 
 @section('breadcrumb')
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a href="{{ route('dashboard.index') }}">Dashboard</a></li>
         <li class="breadcrumb-item"><a href="{{ route('customers.index') }}">Customers</a></li>
-        <li class="breadcrumb-item active">Customer Details</li>
+        <li class="breadcrumb-item active">{{ $customer->name }}</li>
     </ol>
 </nav>
 @endsection
@@ -20,13 +20,15 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center">
                     <div class="avatar-lg bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
-                        <span id="customerInitial">C</span>
+                        <span>{{ strtoupper(substr($customer->name, 0, 1)) }}</span>
                     </div>
                     <div>
-                        <h2 class="mb-1" id="customerName">Customer Name</h2>
+                        <h2 class="mb-1">{{ $customer->name }}</h2>
                         <div class="d-flex align-items-center">
-                            <span class="badge bg-success me-2" id="customerStatus">Active</span>
-                            <span class="text-muted" id="customerCode">CUST001</span>
+                            <span class="badge {{ $customer->status === 'active' ? 'bg-success' : 'bg-secondary' }} me-2">
+                                {{ ucfirst($customer->status) }}
+                            </span>
+                            <span class="text-muted">{{ $customer->customer_code }}</span>
                         </div>
                     </div>
                 </div>
@@ -34,7 +36,7 @@
                     <button class="btn btn-outline-primary" onclick="createOrder()">
                         <i class="bi bi-plus-lg me-1"></i>New Order
                     </button>
-                    <a href="" class="btn btn-outline-secondary" id="editBtn">
+                    <a href="{{ route('customers.edit', $customer->id) }}" class="btn btn-outline-secondary">
                         <i class="bi bi-pencil me-1"></i>Edit
                     </a>
                     <a href="{{ route('customers.index') }}" class="btn btn-outline-secondary">
@@ -53,7 +55,7 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="text-primary text-uppercase mb-1">Total Orders</h6>
-                            <h3 class="mb-0 text-primary" id="totalOrders">-</h3>
+                            <h3 class="mb-0 text-primary">{{ $customer->orders_count ?? 0 }}</h3>
                             <small class="text-muted">Lifetime orders</small>
                         </div>
                         <div class="text-primary">
@@ -70,7 +72,7 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="text-success text-uppercase mb-1">Total Spent</h6>
-                            <h3 class="mb-0 text-success" id="totalSpent">-</h3>
+                            <h3 class="mb-0 text-success">₹{{ number_format($customer->total_spent ?? 0, 2) }}</h3>
                             <small class="text-muted">Lifetime value</small>
                         </div>
                         <div class="text-success">
@@ -87,7 +89,7 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="text-info text-uppercase mb-1">Average Order</h6>
-                            <h3 class="mb-0 text-info" id="averageOrder">-</h3>
+                            <h3 class="mb-0 text-info">₹{{ number_format($customer->average_order ?? 0, 2) }}</h3>
                             <small class="text-muted">Per order value</small>
                         </div>
                         <div class="text-info">
@@ -104,7 +106,7 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h6 class="text-warning text-uppercase mb-1">Last Order</h6>
-                            <h3 class="mb-0 text-warning" id="lastOrderDate">-</h3>
+                            <h3 class="mb-0 text-warning">{{ $customer->last_order_days ?? 'Never' }}</h3>
                             <small class="text-muted">Days ago</small>
                         </div>
                         <div class="text-warning">
@@ -128,26 +130,30 @@
                     <div class="row">
                         <div class="col-md-6">
                             <h6 class="text-muted">Email Address</h6>
-                            <p class="mb-3" id="customerEmail">-</p>
+                            <p class="mb-3">{{ $customer->email ?? 'Not provided' }}</p>
                         </div>
                         <div class="col-md-6">
                             <h6 class="text-muted">Phone Number</h6>
-                            <p class="mb-3" id="customerPhone">-</p>
+                            <p class="mb-3">{{ $customer->phone ?? 'Not provided' }}</p>
                         </div>
                         <div class="col-md-6">
                             <h6 class="text-muted">Customer Type</h6>
                             <p class="mb-3">
-                                <span class="badge bg-secondary" id="customerType">Individual</span>
+                                <span class="badge bg-secondary">{{ ucfirst($customer->customer_type ?? 'individual') }}</span>
                             </p>
                         </div>
-                        <div class="col-md-6" id="companyInfo" style="display: none;">
+                        @if($customer->customer_type === 'business' && $customer->company_name)
+                        <div class="col-md-6">
                             <h6 class="text-muted">Company</h6>
-                            <p class="mb-3" id="companyName">-</p>
+                            <p class="mb-3">{{ $customer->company_name }}</p>
                         </div>
-                        <div class="col-md-12" id="notesSection" style="display: none;">
+                        @endif
+                        @if($customer->notes)
+                        <div class="col-md-12">
                             <h6 class="text-muted">Notes</h6>
-                            <p class="mb-0" id="customerNotes">-</p>
+                            <p class="mb-0">{{ $customer->notes }}</p>
                         </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -162,7 +168,36 @@
                 </div>
                 <div class="card-body">
                     <div id="addressesList">
-                        <!-- Addresses will be loaded here -->
+                        @if(isset($customer->addresses) && is_array($customer->addresses) && count($customer->addresses) > 0)
+                            @foreach($customer->addresses as $address)
+                            <div class="address-item border rounded p-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="bi {{ ($address->type ?? '') === 'billing' ? 'bi-receipt text-primary' : (($address->type ?? '') === 'shipping' ? 'bi-truck text-info' : 'bi-geo-alt text-success') }} me-2"></i>
+                                            <h6 class="mb-0">{{ $address->label ?? ucfirst($address->type ?? 'address') }}</h6>
+                                            @if(($address->is_default ?? false))
+                                                <span class="badge bg-primary ms-2">Default</span>
+                                            @endif
+                                        </div>
+                                        <p class="mb-1">{{ $address->street_address ?? '' }}</p>
+                                        <p class="mb-1">{{ $address->city ?? '' }}, {{ $address->state ?? '' }} {{ $address->postal_code ?? '' }}</p>
+                                        <p class="mb-0 text-muted">{{ $address->country ?? '' }}</p>
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-secondary" onclick="editAddress({{ $address->id ?? 0 }})">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger" onclick="deleteAddress({{ $address->id ?? 0 }})">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            @endforeach
+                        @else
+                            <p class="text-muted">No addresses found</p>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -171,9 +206,11 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Order History</h5>
-                    <a href="" class="btn btn-sm btn-outline-primary" id="viewAllOrdersBtn">
+                    @if(Route::has('orders.index'))
+                    <a href="{{ route('orders.index', ['customer_id' => $customer->id]) }}" class="btn btn-sm btn-outline-primary">
                         View All Orders
                     </a>
+                    @endif
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -188,8 +225,55 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="ordersTableBody">
-                                <!-- Orders will be loaded here -->
+                            <tbody>
+                                @if(isset($customer->orders) && is_array($customer->orders) && count($customer->orders) > 0)
+                                    @foreach(array_slice($customer->orders, 0, 5) as $order)
+                                    <tr>
+                                        <td>
+                                            @if(Route::has('orders.show'))
+                                            <a href="{{ route('orders.show', $order->id ?? 0) }}" class="fw-bold text-decoration-none">
+                                                #{{ $order->order_number ?? 'N/A' }}
+                                            </a>
+                                            @else
+                                            <span class="fw-bold">#{{ $order->order_number ?? 'N/A' }}</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if(isset($order->created_at))
+                                                {{ is_string($order->created_at) ? \Carbon\Carbon::parse($order->created_at)->format('M d, Y') : $order->created_at->format('M d, Y') }}
+                                            @else
+                                                N/A
+                                            @endif
+                                        </td>
+                                        <td>{{ $order->order_items_count ?? 0 }} items</td>
+                                        <td>₹{{ number_format($order->total_amount ?? 0, 2) }}</td>
+                                        <td>
+                                            <span class="badge
+                                                @switch($order->status)
+                                                    @case('pending') bg-warning @break
+                                                    @case('confirmed') bg-info @break
+                                                    @case('processing') bg-primary @break
+                                                    @case('shipped') bg-secondary @break
+                                                    @case('delivered') bg-success @break
+                                                    @case('cancelled') bg-danger @break
+                                                    @default bg-secondary @break
+                                                @endswitch
+                                            ">{{ ucfirst($order->status ?? 'unknown') }}</span>
+                                        </td>
+                                        <td>
+                                            @if(Route::has('orders.show'))
+                                            <a href="{{ route('orders.show', $order->id ?? 0) }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                @else
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted">No orders found</td>
+                                    </tr>
+                                @endif
                             </tbody>
                         </table>
                     </div>
@@ -230,19 +314,19 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <h6 class="text-muted">Credit Limit</h6>
-                        <p class="mb-0" id="creditLimit">₹0</p>
+                        <p class="mb-0">₹{{ number_format($customer->credit_limit ?? 0, 2) }}</p>
                     </div>
                     <div class="mb-3">
                         <h6 class="text-muted">Payment Terms</h6>
-                        <p class="mb-0" id="paymentTerms">30 days</p>
+                        <p class="mb-0">{{ $customer->payment_terms ?? 30 }} days</p>
                     </div>
                     <div class="mb-3">
                         <h6 class="text-muted">Discount</h6>
-                        <p class="mb-0" id="discount">0%</p>
+                        <p class="mb-0">{{ $customer->discount_percentage ?? 0 }}%</p>
                     </div>
                     <div class="mb-3">
                         <h6 class="text-muted">Preferred Contact</h6>
-                        <p class="mb-0" id="preferredContact">Email</p>
+                        <p class="mb-0">{{ ucfirst($customer->preferred_contact_method ?? 'email') }}</p>
                     </div>
                 </div>
             </div>
@@ -254,15 +338,18 @@
                 </div>
                 <div class="card-body">
                     <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="emailNotifications" disabled>
+                        <input class="form-check-input" type="checkbox"
+                               {{ $customer->email_notifications ? 'checked' : '' }} disabled>
                         <label class="form-check-label">Email Notifications</label>
                     </div>
                     <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="smsNotifications" disabled>
+                        <input class="form-check-input" type="checkbox"
+                               {{ $customer->sms_notifications ? 'checked' : '' }} disabled>
                         <label class="form-check-label">SMS Notifications</label>
                     </div>
                     <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="marketingEmails" disabled>
+                        <input class="form-check-input" type="checkbox"
+                               {{ $customer->marketing_emails ? 'checked' : '' }} disabled>
                         <label class="form-check-label">Marketing Emails</label>
                     </div>
                 </div>
@@ -343,7 +430,7 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">To</label>
-                        <input type="email" class="form-control" id="emailTo" readonly>
+                        <input type="email" class="form-control" value="{{ $customer->email }}" readonly>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Subject</label>
@@ -367,16 +454,9 @@
 
 @push('scripts')
 <script>
-let currentCustomerId = {{ $customer->id ?? 'null' }};
-let customerData = null;
+let currentCustomerId = {{ $customer->id }};
 
 $(document).ready(function() {
-    if (currentCustomerId) {
-        loadCustomerData();
-        loadAddresses();
-        loadOrders();
-    }
-
     // Add address form submission
     $('#addAddressForm').on('submit', function(e) {
         e.preventDefault();
@@ -390,189 +470,8 @@ $(document).ready(function() {
     });
 });
 
-function loadCustomerData() {
-    $.get(`/customers/${currentCustomerId}`)
-        .done(function(response) {
-            if (response.success) {
-                customerData = response.data;
-                displayCustomerInfo(customerData);
-            }
-        })
-        .fail(function() {
-            showAlert('Error loading customer data', 'danger');
-        });
-}
-
-function displayCustomerInfo(customer) {
-    // Basic info
-    $('#customerName').text(customer.name || 'N/A');
-    $('#customerCode').text(customer.customer_code || 'N/A');
-    $('#customerInitial').text(customer.name ? customer.name.charAt(0).toUpperCase() : 'C');
-
-    // Status
-    const statusClass = customer.status === 'active' ? 'bg-success' : 'bg-secondary';
-    $('#customerStatus').removeClass('bg-success bg-secondary').addClass(statusClass).text(customer.status || 'Unknown');
-
-    // Contact info
-    $('#customerEmail').text(customer.email || 'Not provided');
-    $('#customerPhone').text(customer.phone || 'Not provided');
-
-    // Customer type
-    const typeText = customer.customer_type === 'business' ? 'Business' : 'Individual';
-    $('#customerType').text(typeText);
-
-    // Company info for business customers
-    if (customer.customer_type === 'business' && customer.company_name) {
-        $('#companyInfo').show();
-        $('#companyName').text(customer.company_name);
-    }
-
-    // Notes
-    if (customer.notes) {
-        $('#notesSection').show();
-        $('#customerNotes').text(customer.notes);
-    }
-
-    // Settings
-    $('#creditLimit').text('₹' + (customer.credit_limit || 0).toLocaleString());
-    $('#paymentTerms').text((customer.payment_terms || 30) + ' days');
-    $('#discount').text((customer.discount_percentage || 0) + '%');
-    $('#preferredContact').text(customer.preferred_contact_method || 'Email');
-
-    // Notification preferences
-    $('#emailNotifications').prop('checked', customer.email_notifications);
-    $('#smsNotifications').prop('checked', customer.sms_notifications);
-    $('#marketingEmails').prop('checked', customer.marketing_emails);
-
-    // Update edit button
-    $('#editBtn').attr('href', `/customers/${customer.id}/edit`);
-    $('#viewAllOrdersBtn').attr('href', `/customers/${customer.id}/orders`);
-    $('#emailTo').val(customer.email);
-
-    // Stats
-    $('#totalOrders').text(customer.stats?.total_orders || 0);
-    $('#totalSpent').text('₹' + (customer.stats?.total_spent || 0).toLocaleString());
-    $('#averageOrder').text('₹' + (customer.stats?.average_order || 0).toLocaleString());
-
-    const lastOrderDays = customer.stats?.last_order_days || 'Never';
-    $('#lastOrderDate').text(lastOrderDays === 'Never' ? 'Never' : lastOrderDays + 'd');
-}
-
-function loadAddresses() {
-    $.get(`/customers/${currentCustomerId}/addresses`)
-        .done(function(response) {
-            if (response.success) {
-                displayAddresses(response.data);
-            }
-        })
-        .fail(function() {
-            $('#addressesList').html('<p class="text-muted">Error loading addresses</p>');
-        });
-}
-
-function displayAddresses(addresses) {
-    let html = '';
-
-    if (addresses.length === 0) {
-        html = '<p class="text-muted">No addresses found</p>';
-    } else {
-        addresses.forEach(function(address) {
-            const typeClass = address.type === 'billing' ? 'text-primary' : address.type === 'shipping' ? 'text-info' : 'text-success';
-            const typeIcon = address.type === 'billing' ? 'bi-receipt' : address.type === 'shipping' ? 'bi-truck' : 'bi-geo-alt';
-
-            html += `
-                <div class="address-item border rounded p-3 mb-3">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div class="flex-grow-1">
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="bi ${typeIcon} ${typeClass} me-2"></i>
-                                <h6 class="mb-0">${address.label || address.type.charAt(0).toUpperCase() + address.type.slice(1)}</h6>
-                                ${address.is_default ? '<span class="badge bg-primary ms-2">Default</span>' : ''}
-                            </div>
-                            <p class="mb-1">${address.street_address}</p>
-                            <p class="mb-1">${address.city}, ${address.state} ${address.postal_code}</p>
-                            <p class="mb-0 text-muted">${address.country}</p>
-                        </div>
-                        <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-secondary" onclick="editAddress(${address.id})">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="btn btn-outline-danger" onclick="deleteAddress(${address.id})">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-    }
-
-    $('#addressesList').html(html);
-}
-
-function loadOrders() {
-    $.get(`/customers/${currentCustomerId}/orders`, { limit: 5 })
-        .done(function(response) {
-            if (response.success) {
-                displayOrders(response.data);
-            }
-        })
-        .fail(function() {
-            $('#ordersTableBody').html('<tr><td colspan="6" class="text-center">Error loading orders</td></tr>');
-        });
-}
-
-function displayOrders(orders) {
-    let html = '';
-
-    if (orders.length === 0) {
-        html = '<tr><td colspan="6" class="text-center text-muted">No orders found</td></tr>';
-    } else {
-        orders.forEach(function(order) {
-            const statusClass = getOrderStatusClass(order.status);
-
-            html += `
-                <tr>
-                    <td>
-                        <a href="/orders/${order.id}" class="fw-bold text-decoration-none">
-                            #${order.order_number}
-                        </a>
-                    </td>
-                    <td>${new Date(order.created_at).toLocaleDateString()}</td>
-                    <td>${order.items_count || 0} items</td>
-                    <td>₹${(order.total_amount || 0).toLocaleString()}</td>
-                    <td>
-                        <span class="badge ${statusClass}">${order.status}</span>
-                    </td>
-                    <td>
-                        <a href="/orders/${order.id}" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-eye"></i>
-                        </a>
-                    </td>
-                </tr>
-            `;
-        });
-    }
-
-    $('#ordersTableBody').html(html);
-}
-
-function getOrderStatusClass(status) {
-    const statusClasses = {
-        'pending': 'bg-warning',
-        'confirmed': 'bg-info',
-        'processing': 'bg-primary',
-        'shipped': 'bg-secondary',
-        'delivered': 'bg-success',
-        'cancelled': 'bg-danger'
-    };
-    return statusClasses[status] || 'bg-secondary';
-}
-
 function createOrder() {
-    if (customerData) {
-        window.location.href = `/orders/create?customer_id=${currentCustomerId}`;
-    }
+    window.location.href = `/orders/create?customer_id=${currentCustomerId}`;
 }
 
 function addNewAddress() {
@@ -636,11 +535,11 @@ function deleteAddress(addressId) {
 }
 
 function sendEmail() {
-    if (customerData && customerData.email) {
-        $('#sendEmailModal').modal('show');
-    } else {
-        showAlert('Customer email not available', 'warning');
-    }
+    @if($customer->email)
+    $('#sendEmailModal').modal('show');
+    @else
+    showAlert('Customer email not available', 'warning');
+    @endif
 }
 
 function submitSendEmail() {
@@ -671,11 +570,11 @@ function submitSendEmail() {
 }
 
 function sendSMS() {
-    if (customerData && customerData.phone) {
-        showAlert('SMS functionality will be implemented', 'info');
-    } else {
-        showAlert('Customer phone number not available', 'warning');
-    }
+    @if($customer->phone)
+    showAlert('SMS functionality will be implemented', 'info');
+    @else
+    showAlert('Customer phone number not available', 'warning');
+    @endif
 }
 
 function exportCustomerData() {
