@@ -644,20 +644,190 @@ class PurchaseController extends Controller
         }
     }
 
+    public function bulkApprove(Request $request): JsonResponse
+    {
+        $request->validate([
+            'purchase_ids' => 'required|array',
+            'purchase_ids.*' => 'exists:purchase_orders,id'
+        ]);
+
+        try {
+            $purchases = Purchase::whereIn('id', $request->purchase_ids)->get();
+            $results = ['success' => 0, 'failed' => 0, 'messages' => []];
+
+            foreach ($purchases as $purchase) {
+                if ($purchase->can_be_approved) {
+                    $purchase->approve(Auth::id());
+                    $results['success']++;
+                } else {
+                    $results['failed']++;
+                    $results['messages'][] = "PO #{$purchase->purchase_order_number} cannot be approved";
+                }
+            }
+
+            return response()->json([
+                'success' => $results['failed'] === 0,
+                'message' => "Bulk approval completed. {$results['success']} approved, {$results['failed']} failed.",
+                'results' => $results
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bulk approval failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function bulkReceive(Request $request): JsonResponse
+    {
+        $request->validate([
+            'purchase_ids' => 'required|array',
+            'purchase_ids.*' => 'exists:purchase_orders,id'
+        ]);
+
+        try {
+            $purchases = Purchase::whereIn('id', $request->purchase_ids)->get();
+            $results = ['success' => 0, 'failed' => 0, 'messages' => []];
+
+            foreach ($purchases as $purchase) {
+                if (in_array($purchase->status, [Purchase::STATUS_APPROVED, Purchase::STATUS_ORDERED, Purchase::STATUS_PARTIAL_RECEIVED])) {
+                    $purchase->markAsReceived(Auth::id());
+                    $results['success']++;
+                } else {
+                    $results['failed']++;
+                    $results['messages'][] = "PO #{$purchase->purchase_order_number} cannot be marked as received";
+                }
+            }
+
+            return response()->json([
+                'success' => $results['failed'] === 0,
+                'message' => "Bulk receive completed. {$results['success']} marked as received, {$results['failed']} failed.",
+                'results' => $results
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bulk receive failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function bulkCancel(Request $request): JsonResponse
+    {
+        $request->validate([
+            'purchase_ids' => 'required|array',
+            'purchase_ids.*' => 'exists:purchase_orders,id',
+            'reason' => 'required|string|max:500'
+        ]);
+
+        try {
+            $purchases = Purchase::whereIn('id', $request->purchase_ids)->get();
+            $results = ['success' => 0, 'failed' => 0, 'messages' => []];
+
+            foreach ($purchases as $purchase) {
+                if ($purchase->can_be_cancelled) {
+                    $purchase->cancel(Auth::id(), $request->reason);
+                    $results['success']++;
+                } else {
+                    $results['failed']++;
+                    $results['messages'][] = "PO #{$purchase->purchase_order_number} cannot be cancelled";
+                }
+            }
+
+            return response()->json([
+                'success' => $results['failed'] === 0,
+                'message' => "Bulk cancellation completed. {$results['success']} cancelled, {$results['failed']} failed.",
+                'results' => $results
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bulk cancellation failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function bulkExport(Request $request)
+    {
+        $request->validate([
+            'purchase_ids' => 'required|array',
+            'purchase_ids.*' => 'exists:purchase_orders,id'
+        ]);
+
+        try {
+            $purchases = Purchase::with(['supplier', 'items'])
+                               ->whereIn('id', $request->purchase_ids)
+                               ->get();
+
+            // Create a simple CSV export
+            $filename = 'purchase_orders_' . now()->format('Y-m-d_H-i-s') . '.csv';
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            ];
+
+            $callback = function() use ($purchases) {
+                $file = fopen('php://output', 'w');
+
+                // CSV Headers
+                fputcsv($file, [
+                    'PO Number',
+                    'Supplier',
+                    'Status',
+                    'Priority',
+                    'Total Amount',
+                    'Purchase Date',
+                    'Expected Delivery',
+                    'Items Count'
+                ]);
+
+                // CSV Data
+                foreach ($purchases as $purchase) {
+                    fputcsv($file, [
+                        $purchase->purchase_order_number,
+                        $purchase->supplier->company_name ?? 'N/A',
+                        $purchase->status_label,
+                        $purchase->priority_label,
+                        $purchase->formatted_total,
+                        $purchase->purchase_date->format('Y-m-d'),
+                        $purchase->expected_delivery_date ? $purchase->expected_delivery_date->format('Y-m-d') : 'N/A',
+                        $purchase->items->count()
+                    ]);
+                }
+
+                fclose($file);
+            };
+
+            return response()->stream($callback, 200, $headers);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bulk export failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     private function getPurchaseStatistics(): array
     {
         return [
-            'total' => Purchase::count(),
+            'total_purchases' => Purchase::count(),
+            'total_value' => Purchase::sum('total_amount'),
+            'pending_orders' => Purchase::byStatus(Purchase::STATUS_PENDING)->count(),
+            'overdue_orders' => Purchase::overdue()->count(),
+            'monthly_orders' => Purchase::whereMonth('created_at', now()->month)
+                                     ->whereYear('created_at', now()->year)
+                                     ->count(),
+            'avg_delivery_days' => 15, // TODO: Calculate actual average
+            'active_suppliers' => Supplier::where('status', 'active')->count(),
+            'cost_savings' => 0, // TODO: Calculate actual cost savings
             'draft' => Purchase::byStatus(Purchase::STATUS_DRAFT)->count(),
-            'pending' => Purchase::byStatus(Purchase::STATUS_PENDING)->count(),
             'approved' => Purchase::byStatus(Purchase::STATUS_APPROVED)->count(),
             'ordered' => Purchase::byStatus(Purchase::STATUS_ORDERED)->count(),
             'received' => Purchase::byStatus(Purchase::STATUS_RECEIVED)->count(),
-            'overdue' => Purchase::overdue()->count(),
-            'total_value' => Purchase::sum('total_amount'),
-            'this_month' => Purchase::whereMonth('created_at', now()->month)
-                                  ->whereYear('created_at', now()->year)
-                                  ->count(),
         ];
     }
 }

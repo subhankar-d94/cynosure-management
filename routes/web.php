@@ -253,7 +253,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/{purchase}/duplicate', [PurchaseController::class, 'duplicate'])->name('duplicate');
 
         // Bulk operations
-        Route::post('/bulk-actions', [PurchaseController::class, 'bulkActions'])->name('bulk-actions');
+        Route::post('/bulk-approve', [PurchaseController::class, 'bulkApprove'])->name('bulk-approve');
+        Route::post('/bulk-receive', [PurchaseController::class, 'bulkReceive'])->name('bulk-receive');
+        Route::post('/bulk-cancel', [PurchaseController::class, 'bulkCancel'])->name('bulk-cancel');
+        Route::post('/bulk-export', [PurchaseController::class, 'bulkExport'])->name('bulk-export');
         Route::get('/export', [PurchaseController::class, 'export'])->name('export');
     });
 
