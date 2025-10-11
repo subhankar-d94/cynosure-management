@@ -50,7 +50,7 @@
                 </div>
                 <div class="col-auto">
                     <div class="text-center">
-                        <div class="fs-2 fw-bold text-primary">{{ $inventory->stock_quantity }}</div>
+                        <div class="fs-2 fw-bold text-primary">{{ $inventory->quantity_in_stock }}</div>
                         <small class="text-muted">Current Stock</small>
                     </div>
                 </div>

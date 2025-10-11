@@ -297,10 +297,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('analytics')->name('analytics.')->group(function () {
         Route::get('/', [AnalyticsController::class, 'index'])->name('index');
         Route::get('/dashboard', [AnalyticsController::class, 'dashboard'])->name('dashboard');
+        Route::get('/dashboard-data', [AnalyticsController::class, 'getDashboardData'])->name('dashboard-data');
         Route::get('/trends', [AnalyticsController::class, 'trends'])->name('trends');
         Route::get('/forecasting', [AnalyticsController::class, 'forecasting'])->name('forecasting');
         Route::get('/cohort', [AnalyticsController::class, 'cohortAnalysis'])->name('cohort');
         Route::get('/data/{type}', [AnalyticsController::class, 'getData'])->name('data');
+        Route::get('/trends/{type}', [AnalyticsController::class, 'getTrendData'])->name('trends.data');
     });
 
     // Address Routes (Google Places Integration)

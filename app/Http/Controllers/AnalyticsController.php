@@ -8,6 +8,8 @@ use App\Models\Product;
 use App\Models\Inventory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class AnalyticsController extends Controller
@@ -198,26 +200,33 @@ class AnalyticsController extends Controller
             ->map(function ($products) {
                 return [
                     'total_products' => $products->count(),
-                    'total_stock' => $products->sum('inventory.stock_quantity'),
+                    'total_stock' => $products->sum('inventory.quantity_in_stock'),
                     'total_value' => $products->sum(function ($product) {
-                        return $product->price * $product->inventory->stock_quantity;
+                        return $product->price * $product->inventory->quantity_in_stock;
                     })
                 ];
             });
 
         // Low stock alerts
         $lowStockProducts = Inventory::with('product')
-            ->whereRaw('stock_quantity <= reorder_level')
+            ->whereRaw('quantity_in_stock <= reorder_level')
             ->get();
 
-        // Inventory movement over time
-        $startDate = Carbon::now()->subDays($period);
-        $inventoryMovements = DB::table('inventory_movements')
-            ->whereBetween('created_at', [$startDate, Carbon::now()])
-            ->selectRaw('DATE(created_at) as date, movement_type, SUM(ABS(quantity)) as total_quantity')
-            ->groupBy('date', 'movement_type')
-            ->orderBy('date')
-            ->get();
+        // Inventory movement over time (check if table exists)
+        $inventoryMovements = collect();
+        try {
+            $startDate = Carbon::now()->subDays($period);
+            if (Schema::hasTable('inventory_movements')) {
+                $inventoryMovements = DB::table('inventory_movements')
+                    ->whereBetween('created_at', [$startDate, Carbon::now()])
+                    ->selectRaw('DATE(created_at) as date, movement_type, SUM(ABS(quantity)) as total_quantity')
+                    ->groupBy('date', 'movement_type')
+                    ->orderBy('date')
+                    ->get();
+            }
+        } catch (\Exception $e) {
+            Log::info('Inventory movements table not available: ' . $e->getMessage());
+        }
 
         return response()->json([
             'success' => true,
@@ -359,27 +368,71 @@ class AnalyticsController extends Controller
     // Additional methods for dashboard widgets
     public function getDashboardData()
     {
-        $today = Carbon::now()->startOfDay();
-        $weekAgo = Carbon::now()->subWeek();
-        $monthAgo = Carbon::now()->subMonth();
+        try {
+            $today = Carbon::now()->startOfDay();
+            $weekAgo = Carbon::now()->subWeek();
+            $monthAgo = Carbon::now()->subMonth();
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'today_sales' => Order::where('status', '!=', 'cancelled')
+            // Get order stats with proper error handling
+            $todaySales = 0;
+            $weekSales = 0;
+            $monthSales = 0;
+            $totalOrders = 0;
+
+            try {
+                $todaySales = Order::where('status', '!=', 'cancelled')
                     ->whereDate('created_at', $today)
-                    ->sum('total_amount'),
-                'week_sales' => Order::where('status', '!=', 'cancelled')
+                    ->sum('total_amount') ?? 0;
+
+                $weekSales = Order::where('status', '!=', 'cancelled')
                     ->whereBetween('created_at', [$weekAgo, Carbon::now()])
-                    ->sum('total_amount'),
-                'month_sales' => Order::where('status', '!=', 'cancelled')
+                    ->sum('total_amount') ?? 0;
+
+                $monthSales = Order::where('status', '!=', 'cancelled')
                     ->whereBetween('created_at', [$monthAgo, Carbon::now()])
-                    ->sum('total_amount'),
-                'total_customers' => Customer::count(),
-                'total_products' => Product::count(),
-                'low_stock_count' => Inventory::whereRaw('stock_quantity <= reorder_level')->count()
-            ]
-        ]);
+                    ->sum('total_amount') ?? 0;
+
+                $totalOrders = Order::where('status', '!=', 'cancelled')->count();
+            } catch (\Exception $e) {
+                Log::warning('Error fetching order data for analytics: ' . $e->getMessage());
+            }
+
+            // Get inventory stats with error handling
+            $lowStockCount = 0;
+            try {
+                $lowStockCount = Inventory::whereRaw('quantity_in_stock <= reorder_level')->count();
+            } catch (\Exception $e) {
+                Log::warning('Error fetching inventory data for analytics: ' . $e->getMessage());
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'today_sales' => $todaySales,
+                    'week_sales' => $weekSales,
+                    'month_sales' => $monthSales,
+                    'total_orders' => $totalOrders,
+                    'total_customers' => Customer::count(),
+                    'total_products' => Product::count(),
+                    'low_stock_count' => $lowStockCount
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error in getDashboardData: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Error loading dashboard data',
+                'data' => [
+                    'today_sales' => 0,
+                    'week_sales' => 0,
+                    'month_sales' => 0,
+                    'total_orders' => 0,
+                    'total_customers' => 0,
+                    'total_products' => 0,
+                    'low_stock_count' => 0
+                ]
+            ]);
+        }
     }
 
     public function getSalesChart($period = '30')

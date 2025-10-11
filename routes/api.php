@@ -180,13 +180,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
             // Return CSV templates for import
             $templates = [
                 'products' => [
-                    'name', 'sku', 'description', 'price', 'category', 'stock_quantity'
+                    'name', 'sku', 'description', 'price', 'category', 'quantity_in_stock'
                 ],
                 'customers' => [
                     'name', 'email', 'phone', 'address', 'city', 'state', 'pincode'
                 ],
                 'inventory' => [
-                    'product_sku', 'stock_quantity', 'reorder_level', 'supplier'
+                    'product_sku', 'quantity_in_stock', 'reorder_level', 'supplier'
                 ]
             ];
 

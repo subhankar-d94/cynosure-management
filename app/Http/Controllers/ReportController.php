@@ -109,9 +109,9 @@ class ReportController extends Controller
                 return [
                     'product_name' => $inventory->product->name,
                     'sku' => $inventory->product->sku,
-                    'stock_quantity' => $inventory->stock_quantity,
+                    'stock_quantity' => $inventory->quantity_in_stock,
                     'unit_price' => $inventory->product->price,
-                    'total_value' => $inventory->stock_quantity * $inventory->product->price
+                    'total_value' => $inventory->quantity_in_stock * $inventory->product->price
                 ];
             });
 
@@ -244,9 +244,9 @@ class ReportController extends Controller
         $summary = [
             'total_products' => Product::count(),
             'total_stock_value' => Inventory::join('products', 'inventories.product_id', '=', 'products.id')
-                ->selectRaw('SUM(inventories.stock_quantity * products.price) as total_value')
+                ->selectRaw('SUM(inventories.quantity_in_stock * products.price) as total_value')
                 ->value('total_value'),
-            'low_stock_items' => Inventory::whereRaw('stock_quantity <= reorder_level')->count()
+            'low_stock_items' => Inventory::whereRaw('quantity_in_stock <= reorder_level')->count()
         ];
 
         return response()->json(['success' => true, 'data' => $summary]);
