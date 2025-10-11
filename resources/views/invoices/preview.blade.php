@@ -197,7 +197,7 @@
                         Your Company
                     </div>
                     <div class="company-details">
-                        <strong>Your Company Name</strong><br>
+                        <strong>Cynosure Titli</strong><br>
                         123 Business Street<br>
                         City, State 12345<br>
                         Phone: (555) 123-4567<br>

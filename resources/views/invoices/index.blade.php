@@ -470,9 +470,6 @@ $(document).ready(function() {
                                     Actions
                                 </button>
                                 <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="#" onclick="quickView(${invoice.id})">
-                                        <i class="fas fa-eye"></i> Quick View
-                                    </a></li>
                                     <li><a class="dropdown-item" href="{{ route('invoices.show', '') }}/${invoice.id}">
                                         <i class="fas fa-file-alt"></i> View Details
                                     </a></li>
@@ -483,10 +480,10 @@ $(document).ready(function() {
                                     <li><a class="dropdown-item" href="#" onclick="sendInvoice(${invoice.id})">
                                         <i class="fas fa-paper-plane"></i> Send
                                     </a></li>
-                                    <li><a class="dropdown-item" href="{{ route('invoices.download', '') }}/${invoice.id}">
+                                    <li><a class="dropdown-item" href="/invoices/${invoice.id}/download" target="_blank">
                                         <i class="fas fa-download"></i> Download PDF
                                     </a></li>
-                                    <li><a class="dropdown-item" href="{{ route('invoices.print', '') }}/${invoice.id}" target="_blank">
+                                    <li><a class="dropdown-item" href="/invoices/${invoice.id}/print" target="_blank">
                                         <i class="fas fa-print"></i> Print
                                     </a></li>
                                     <li><hr class="dropdown-divider"></li>
