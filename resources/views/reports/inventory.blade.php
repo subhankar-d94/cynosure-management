@@ -96,7 +96,7 @@
                         <label class="form-label">Supplier</label>
                         <select class="form-select" id="supplierFilter">
                             <option value="">All Suppliers</option>
-                            @foreach($inventoryData->pluck('supplier.name')->unique()->filter() as $supplier)
+                            @foreach($inventoryData->pluck('supplier.company_name')->unique()->filter() as $supplier)
                             <option value="{{ $supplier }}">{{ $supplier }}</option>
                             @endforeach
                         </select>
@@ -134,7 +134,7 @@
                             @forelse($inventoryData as $inventory)
                             <tr data-product="{{ strtolower($inventory->product->name ?? '') }}"
                                 data-sku="{{ strtolower($inventory->product->sku ?? '') }}"
-                                data-supplier="{{ strtolower($inventory->supplier->name ?? '') }}"
+                                data-supplier="{{ strtolower($inventory->supplier->company_name ?? '') }}"
                                 data-stock="{{ $inventory->quantity_in_stock }}">
                                 <td>
                                     <div class="d-flex align-items-center">
@@ -156,7 +156,7 @@
                                     </span>
                                 </td>
                                 <td>{{ number_format($inventory->reorder_level) }}</td>
-                                <td>{{ $inventory->supplier->name ?? 'N/A' }}</td>
+                                <td>{{ $inventory->supplier->company_name ?? 'N/A' }}</td>
                                 <td>{{ $inventory->updated_at->format('d/m/Y H:i') }}</td>
                                 <td>
                                     @if($inventory->quantity_in_stock <= 0)

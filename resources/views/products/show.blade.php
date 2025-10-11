@@ -324,7 +324,7 @@ use Illuminate\Support\Facades\Storage;
                     </h6>
                 </div>
                 <div class="card-body">
-                    <h6 class="mb-2">{{ $product->inventory->supplier->name }}</h6>
+                    <h6 class="mb-2">{{ $product->inventory->supplier->company_name }}</h6>
                     <p class="text-muted small mb-2">{{ $product->inventory->supplier->email }}</p>
                     <p class="text-muted small mb-3">{{ $product->inventory->supplier->phone }}</p>
                     <a href="{{ route('suppliers.show', $product->inventory->supplier) }}" class="btn btn-sm btn-outline-primary">

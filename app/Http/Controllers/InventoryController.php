@@ -576,7 +576,7 @@ class InventoryController extends Controller
                     $inventory->cost_per_unit,
                     $stockValue,
                     $status,
-                    $inventory->supplier->name ?? 'N/A',
+                    $inventory->supplier->company_name ?? 'N/A',
                     $inventory->updated_at->format('Y-m-d H:i:s')
                 ]);
             }

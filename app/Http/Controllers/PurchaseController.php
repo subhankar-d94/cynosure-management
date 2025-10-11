@@ -63,7 +63,7 @@ class PurchaseController extends Controller
         $stats = $this->getPurchaseStatistics();
 
         // Get filter options
-        $suppliers = Supplier::select('id', 'name', 'company_name')->get();
+        $suppliers = Supplier::select('id', 'company_name')->get();
 
         return view('purchases.index', compact('purchases', 'stats', 'suppliers'));
     }

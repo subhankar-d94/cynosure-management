@@ -241,7 +241,7 @@ use Illuminate\Support\Facades\Storage;
                                     <select class="form-select" name="supplier_id">
                                         <option value="">Select Supplier</option>
                                         @foreach($suppliers as $supplier)
-                                            <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
+                                            <option value="{{ $supplier->id }}">{{ $supplier->company_name }}</option>
                                         @endforeach
                                     </select>
                                 </div>

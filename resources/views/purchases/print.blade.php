@@ -321,7 +321,7 @@
                     <div class="section-title">Supplier Information</div>
                     <div class="info-row">
                         <span class="info-label">Company:</span>
-                        <span class="info-value">{{ $purchase->supplier->company_name ?? $purchase->supplier->name ?? 'ABC Suppliers Ltd.' }}</span>
+                        <span class="info-value">{{ $purchase->supplier->company_name ?? 'ABC Suppliers Ltd.' }}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Contact:</span>

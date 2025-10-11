@@ -45,7 +45,7 @@
                     <div class="d-flex align-items-center gap-3">
                         <span><strong>SKU:</strong> <code>{{ $inventory->product->sku }}</code></span>
                         <span><strong>Category:</strong> {{ $inventory->product->category->name ?? '-' }}</span>
-                        <span><strong>Supplier:</strong> {{ $inventory->supplier->name ?? '-' }}</span>
+                        <span><strong>Supplier:</strong> {{ $inventory->supplier->company_name ?? '-' }}</span>
                     </div>
                 </div>
                 <div class="col-auto">

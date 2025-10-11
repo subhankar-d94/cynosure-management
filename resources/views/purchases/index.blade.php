@@ -95,17 +95,19 @@
         text-transform: uppercase;
     }
 
-    .status-draft { background: #fff3cd; color: #856404; }
-    .status-pending { background: #cce7ff; color: #004085; }
-    .status-approved { background: #d4edda; color: #155724; }
-    .status-ordered { background: #d1ecf1; color: #0c5460; }
-    .status-received { background: #c3e6cb; color: #155724; }
+    .status-draft { background: #e2e3e5; color: #6c757d; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-approved { background: #d1ecf1; color: #0c5460; }
+    .status-ordered { background: #cce7ff; color: #004085; }
+    .status-partial_received { background: #d1ecf1; color: #0c5460; }
+    .status-received { background: #d4edda; color: #155724; }
     .status-cancelled { background: #f8d7da; color: #721c24; }
-    .status-paid { background: #d4edda; color: #155724; }
+    .status-completed { background: #d4edda; color: #155724; }
 
-    .priority-high { color: #dc3545; }
-    .priority-medium { color: #ffc107; }
     .priority-low { color: #28a745; }
+    .priority-medium { color: #ffc107; }
+    .priority-high { color: #dc3545; }
+    .priority-urgent { color: #dc3545; font-weight: bold; }
 
     .btn-create {
         background: #17a2b8;
@@ -129,6 +131,36 @@
         display: flex;
         gap: 8px;
         flex-wrap: wrap;
+    }
+
+    .progress {
+        height: 6px;
+    }
+
+    .purchase-row {
+        cursor: pointer;
+    }
+
+    .purchase-row:hover {
+        background-color: #f8f9fc !important;
+    }
+
+    .overdue-indicator {
+        background: #ff4757;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+    }
+
+    .urgent-indicator {
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
     }
 
     @media (max-width: 768px) {
@@ -169,38 +201,50 @@
     <div class="row">
         <div class="col-lg-3 col-md-6">
             <div class="stat-card">
-                <div class="stat-number text-info">{{ $stats['total_purchases'] ?? '287' }}</div>
+                <div class="stat-number text-info">{{ $stats['total_purchases'] ?? 0 }}</div>
                 <div class="stat-label">Total Orders</div>
-                <div class="stat-trend trend-up">
-                    <i class="fas fa-arrow-up"></i> +12% from last month
+                @if(isset($stats['total_purchases_trend']))
+                <div class="stat-trend {{ $stats['total_purchases_trend'] > 0 ? 'trend-up' : 'trend-down' }}">
+                    <i class="fas fa-arrow-{{ $stats['total_purchases_trend'] > 0 ? 'up' : 'down' }}"></i>
+                    {{ abs($stats['total_purchases_trend']) }}% from last month
                 </div>
+                @endif
             </div>
         </div>
         <div class="col-lg-3 col-md-6">
             <div class="stat-card">
-                <div class="stat-number text-success">${{ number_format($stats['total_value'] ?? 1247650, 0) }}</div>
+                <div class="stat-number text-success">₹{{ number_format($stats['total_value'] ?? 0, 2) }}</div>
                 <div class="stat-label">Total Value</div>
-                <div class="stat-trend trend-up">
-                    <i class="fas fa-arrow-up"></i> +8% from last month
+                @if(isset($stats['total_value_trend']))
+                <div class="stat-trend {{ $stats['total_value_trend'] > 0 ? 'trend-up' : 'trend-down' }}">
+                    <i class="fas fa-arrow-{{ $stats['total_value_trend'] > 0 ? 'up' : 'down' }}"></i>
+                    {{ abs($stats['total_value_trend']) }}% from last month
                 </div>
+                @endif
             </div>
         </div>
         <div class="col-lg-3 col-md-6">
             <div class="stat-card">
-                <div class="stat-number text-warning">{{ $stats['pending_orders'] ?? '23' }}</div>
+                <div class="stat-number text-warning">{{ $stats['pending_orders'] ?? 0 }}</div>
                 <div class="stat-label">Pending Orders</div>
-                <div class="stat-trend trend-down">
-                    <i class="fas fa-arrow-down"></i> -3% from last month
+                @if(isset($stats['pending_orders_trend']))
+                <div class="stat-trend {{ $stats['pending_orders_trend'] > 0 ? 'trend-up' : 'trend-down' }}">
+                    <i class="fas fa-arrow-{{ $stats['pending_orders_trend'] > 0 ? 'up' : 'down' }}"></i>
+                    {{ abs($stats['pending_orders_trend']) }} from last week
                 </div>
+                @endif
             </div>
         </div>
         <div class="col-lg-3 col-md-6">
             <div class="stat-card">
-                <div class="stat-number text-danger">{{ $stats['overdue_orders'] ?? '7' }}</div>
+                <div class="stat-number text-danger">{{ $stats['overdue_orders'] ?? 0 }}</div>
                 <div class="stat-label">Overdue Orders</div>
-                <div class="stat-trend trend-up">
-                    <i class="fas fa-arrow-up"></i> +2 from last week
+                @if(isset($stats['overdue_orders_trend']))
+                <div class="stat-trend {{ $stats['overdue_orders_trend'] > 0 ? 'trend-up' : 'trend-down' }}">
+                    <i class="fas fa-arrow-{{ $stats['overdue_orders_trend'] > 0 ? 'up' : 'down' }}"></i>
+                    {{ abs($stats['overdue_orders_trend']) }} from last week
                 </div>
+                @endif
             </div>
         </div>
     </div>
@@ -209,25 +253,25 @@
     <div class="row">
         <div class="col-lg-3 col-md-6">
             <div class="stat-card">
-                <div class="stat-number text-primary">{{ $stats['monthly_orders'] ?? '45' }}</div>
+                <div class="stat-number text-primary">{{ $stats['monthly_orders'] ?? 0 }}</div>
                 <div class="stat-label">This Month</div>
             </div>
         </div>
         <div class="col-lg-3 col-md-6">
             <div class="stat-card">
-                <div class="stat-number text-secondary">{{ $stats['avg_delivery_days'] ?? '12' }} Days</div>
+                <div class="stat-number text-secondary">{{ $stats['avg_delivery_days'] ?? 0 }} Days</div>
                 <div class="stat-label">Avg Delivery</div>
             </div>
         </div>
         <div class="col-lg-3 col-md-6">
             <div class="stat-card">
-                <div class="stat-number text-info">{{ $stats['active_suppliers'] ?? '89' }}</div>
+                <div class="stat-number text-info">{{ $stats['active_suppliers'] ?? 0 }}</div>
                 <div class="stat-label">Active Suppliers</div>
             </div>
         </div>
         <div class="col-lg-3 col-md-6">
             <div class="stat-card">
-                <div class="stat-number text-success">${{ number_format($stats['cost_savings'] ?? 47250, 0) }}</div>
+                <div class="stat-number text-success">₹{{ number_format($stats['cost_savings'] ?? 0, 2) }}</div>
                 <div class="stat-label">Cost Savings</div>
             </div>
         </div>
@@ -235,62 +279,78 @@
 
     <!-- Filters and Search -->
     <div class="filter-card">
-        <div class="row">
-            <div class="col-md-3">
-                <label class="form-label">Search</label>
-                <input type="text" class="form-control" id="searchPurchases" placeholder="Search PO number, supplier...">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Status</label>
-                <select class="form-select" id="statusFilter">
-                    <option value="">All Status</option>
-                    <option value="draft">Draft</option>
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
-                    <option value="ordered">Ordered</option>
-                    <option value="received">Received</option>
-                    <option value="cancelled">Cancelled</option>
-                    <option value="paid">Paid</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Supplier</label>
-                <select class="form-select" id="supplierFilter">
-                    <option value="">All Suppliers</option>
-                    <option value="1">TechCorp Solutions</option>
-                    <option value="2">Global Manufacturing</option>
-                    <option value="3">Premium Services</option>
-                    <option value="4">Industrial Supplies</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Priority</label>
-                <select class="form-select" id="priorityFilter">
-                    <option value="">All Priority</option>
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Date Range</label>
-                <select class="form-select" id="dateFilter">
-                    <option value="">All Time</option>
-                    <option value="today">Today</option>
-                    <option value="week">This Week</option>
-                    <option value="month">This Month</option>
-                    <option value="quarter">This Quarter</option>
-                </select>
-            </div>
-            <div class="col-md-1">
-                <label class="form-label">&nbsp;</label>
-                <div class="d-grid">
-                    <button class="btn btn-outline-secondary" onclick="clearFilters()">
-                        <i class="fas fa-undo"></i>
-                    </button>
+        <form method="GET" action="{{ route('purchases.index') }}">
+            <div class="row">
+                <div class="col-md-3">
+                    <label class="form-label">Search</label>
+                    <input type="text" class="form-control" name="search" value="{{ request('search') }}" placeholder="Search PO number, supplier...">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" name="status">
+                        <option value="">All Status</option>
+                        <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>Draft</option>
+                        <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
+                        <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Approved</option>
+                        <option value="ordered" {{ request('status') == 'ordered' ? 'selected' : '' }}>Ordered</option>
+                        <option value="received" {{ request('status') == 'received' ? 'selected' : '' }}>Received</option>
+                        <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                        <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Completed</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Supplier</label>
+                    <select class="form-select" name="supplier_id">
+                        <option value="">All Suppliers</option>
+                        @foreach($suppliers as $supplier)
+                            <option value="{{ $supplier->id }}" {{ request('supplier_id') == $supplier->id ? 'selected' : '' }}>
+                                {{ $supplier->company_name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Priority</label>
+                    <select class="form-select" name="priority">
+                        <option value="">All Priority</option>
+                        <option value="low" {{ request('priority') == 'low' ? 'selected' : '' }}>Low</option>
+                        <option value="medium" {{ request('priority') == 'medium' ? 'selected' : '' }}>Medium</option>
+                        <option value="high" {{ request('priority') == 'high' ? 'selected' : '' }}>High</option>
+                        <option value="urgent" {{ request('priority') == 'urgent' ? 'selected' : '' }}>Urgent</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Date From</label>
+                    <input type="date" class="form-control" name="date_from" value="{{ request('date_from') }}">
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+            <div class="row mt-2">
+                <div class="col-md-2">
+                    <input type="date" class="form-control" name="date_to" value="{{ request('date_to') }}" placeholder="Date To">
+                </div>
+                <div class="col-md-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="urgent" id="urgentFilter" value="1" {{ request('urgent') ? 'checked' : '' }}>
+                        <label class="form-check-label" for="urgentFilter">
+                            Urgent Only
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <a href="{{ route('purchases.index') }}" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-undo"></i> Clear
+                    </a>
+                </div>
+            </div>
+        </form>
     </div>
 
     <!-- Purchase Orders Table -->
@@ -302,15 +362,17 @@
                 </div>
                 <div class="col-md-6 text-md-end">
                     <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="refreshTable()">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="window.location.reload()">
                             <i class="fas fa-sync"></i> Refresh
                         </button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="exportData()">
+                        <a href="{{ route('purchases.export') }}" class="btn btn-outline-secondary btn-sm">
                             <i class="fas fa-download"></i> Export
-                        </button>
-                        <button type="button" class="btn btn-outline-info btn-sm" onclick="bulkActions()">
+                        </a>
+                        @if($purchases->count() > 0)
+                        <button type="button" class="btn btn-outline-info btn-sm" onclick="toggleBulkActions()">
                             <i class="fas fa-tasks"></i> Bulk Actions
                         </button>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -320,9 +382,11 @@
             <table class="table table-hover mb-0" id="purchasesTable">
                 <thead>
                     <tr>
+                        @if($purchases->count() > 0)
                         <th width="5%">
                             <input type="checkbox" class="form-check-input" id="selectAll">
                         </th>
+                        @endif
                         <th>Order Details</th>
                         <th>Supplier</th>
                         <th>Items</th>
@@ -332,53 +396,100 @@
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody id="purchasesTableBody">
-                    <tr>
+                <tbody>
+                    @forelse($purchases as $purchase)
+                    <tr class="purchase-row" data-id="{{ $purchase->id }}">
                         <td>
-                            <input type="checkbox" class="form-check-input purchase-checkbox" value="PO-2024-001">
+                            <input type="checkbox" class="form-check-input purchase-checkbox" value="{{ $purchase->id }}">
                         </td>
                         <td>
                             <div>
-                                <strong>PO-2024-001</strong>
-                                <br><small class="text-muted">Enterprise Software Licenses</small>
+                                <strong>{{ $purchase->purchase_order_number }}</strong>
+                                @if($purchase->reference_number)
+                                <br><small class="text-muted">Ref: {{ $purchase->reference_number }}</small>
+                                @endif
                                 <div class="mt-1">
-                                    <span class="badge bg-danger priority-high">High Priority</span>
+                                    <span class="badge bg-{{ $purchase->priority_color }} priority-{{ $purchase->priority }}">
+                                        {{ $purchase->priority_label }}
+                                        @if($purchase->urgent)
+                                        <i class="fas fa-exclamation urgent-indicator"></i>
+                                        @endif
+                                    </span>
+                                    @if($purchase->is_overdue)
+                                    <span class="overdue-indicator ms-1">
+                                        {{ $purchase->days_overdue }} days overdue
+                                    </span>
+                                    @endif
                                 </div>
                             </div>
                         </td>
                         <td>
                             <div>
-                                <strong>TechCorp Solutions</strong>
-                                <br><small class="text-muted">john.anderson@techcorp.com</small>
-                                <br><small class="text-muted">+1 (555) 123-4567</small>
+                                <strong>{{ $purchase->supplier->company_name ?? 'N/A' }}</strong>
+                                @if($purchase->supplier->email)
+                                <br><small class="text-muted">{{ $purchase->supplier->email }}</small>
+                                @endif
+                                @if($purchase->supplier->phone)
+                                <br><small class="text-muted">{{ $purchase->supplier->phone }}</small>
+                                @endif
                             </div>
                         </td>
                         <td>
                             <div>
-                                <strong>3 Items</strong>
-                                <br><small class="text-muted">Software Licenses (3)</small>
-                                <div class="progress mt-1" style="height: 4px;">
-                                    <div class="progress-bar bg-success" style="width: 100%"></div>
+                                <strong>{{ $purchase->items->count() }} Item{{ $purchase->items->count() !== 1 ? 's' : '' }}</strong>
+                                @if($purchase->items->count() > 0)
+                                <br><small class="text-muted">Total Qty: {{ $purchase->total_items }}</small>
+                                <div class="progress mt-1">
+                                    <div class="progress-bar bg-{{ $purchase->receive_progress == 100 ? 'success' : ($purchase->receive_progress > 0 ? 'info' : 'warning') }}"
+                                         style="width: {{ $purchase->receive_progress }}%"></div>
                                 </div>
-                                <small class="text-muted">100% Complete</small>
+                                <small class="text-muted">{{ $purchase->receive_progress }}% Received</small>
+                                @endif
                             </div>
                         </td>
                         <td>
                             <div>
-                                <strong>$24,500.00</strong>
-                                <br><small class="text-success">Paid: $24,500.00</small>
-                                <br><small class="text-muted">Balance: $0.00</small>
+                                <strong>{{ $purchase->formatted_total }}</strong>
+                                @if($purchase->paid_amount > 0)
+                                <br><small class="text-success">Paid: {{ $purchase->currency }} {{ number_format($purchase->paid_amount, 2) }}</small>
+                                <br><small class="text-{{ ($purchase->total_amount - $purchase->paid_amount) > 0 ? 'danger' : 'success' }}">
+                                    Balance: {{ $purchase->currency }} {{ number_format($purchase->total_amount - $purchase->paid_amount, 2) }}
+                                </small>
+                                @else
+                                <br><small class="text-danger">Unpaid</small>
+                                @endif
                             </div>
                         </td>
                         <td>
-                            <span class="status-badge status-paid">Paid</span>
-                            <br><small class="text-muted">Completed successfully</small>
+                            <span class="status-badge status-{{ $purchase->status }}">{{ $purchase->status_label }}</span>
+                            @if($purchase->status == 'pending' && $purchase->requires_approval)
+                            <br><small class="text-muted">Awaiting approval</small>
+                            @elseif($purchase->status == 'ordered')
+                            <br><small class="text-muted">In progress</small>
+                            @elseif($purchase->status == 'received')
+                            <br><small class="text-success">Completed</small>
+                            @endif
                         </td>
                         <td>
                             <div>
-                                <strong>Ordered:</strong> Jan 15, 2024
-                                <br><small class="text-muted">Expected: Jan 29, 2024</small>
-                                <br><small class="text-success">Delivered: Jan 28, 2024</small>
+                                <strong>Ordered:</strong> {{ $purchase->purchase_date->format('M d, Y') }}
+                                @if($purchase->expected_delivery_date)
+                                <br><small class="text-muted">Expected: {{ $purchase->expected_delivery_date->format('M d, Y') }}</small>
+                                @endif
+                                @if($purchase->actual_delivery_date)
+                                <br><small class="text-success">Delivered: {{ $purchase->actual_delivery_date->format('M d, Y') }}</small>
+                                @elseif($purchase->expected_delivery_date)
+                                    @if($purchase->is_overdue)
+                                    <br><small class="text-danger">{{ $purchase->days_overdue }} days overdue</small>
+                                    @else
+                                    @php
+                                        $daysRemaining = now()->diffInDays($purchase->expected_delivery_date, false);
+                                    @endphp
+                                    @if($daysRemaining >= 0)
+                                    <br><small class="text-info">{{ $daysRemaining }} days remaining</small>
+                                    @endif
+                                    @endif
+                                @endif
                             </div>
                         </td>
                         <td>
@@ -387,194 +498,67 @@
                                     Actions
                                 </button>
                                 <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="{{ route('purchases.show', 'PO-2024-001') }}">
+                                    <li><a class="dropdown-item" href="{{ route('purchases.show', $purchase) }}">
                                         <i class="fas fa-eye"></i> View Details
                                     </a></li>
-                                    <li><a class="dropdown-item" href="{{ route('purchases.print', 'PO-2024-001') }}">
+                                    @if($purchase->can_be_edited)
+                                    <li><a class="dropdown-item" href="{{ route('purchases.edit', $purchase) }}">
+                                        <i class="fas fa-edit"></i> Edit Order
+                                    </a></li>
+                                    @endif
+                                    @if($purchase->can_be_approved)
+                                    <li><a class="dropdown-item" href="#" onclick="approveOrder('{{ $purchase->id }}')">
+                                        <i class="fas fa-check"></i> Approve Order
+                                    </a></li>
+                                    @endif
+                                    @if($purchase->status != 'received' && $purchase->status != 'cancelled')
+                                    <li><a class="dropdown-item" href="#" onclick="receiveOrder('{{ $purchase->id }}')">
+                                        <i class="fas fa-box"></i> Mark Received
+                                    </a></li>
+                                    @endif
+                                    <li><a class="dropdown-item" href="{{ route('purchases.print', $purchase) }}">
                                         <i class="fas fa-print"></i> Print Order
                                     </a></li>
-                                    <li><a class="dropdown-item" href="#" onclick="duplicateOrder('PO-2024-001')">
+                                    <li><a class="dropdown-item" href="#" onclick="duplicateOrder('{{ $purchase->id }}')">
                                         <i class="fas fa-copy"></i> Duplicate
                                     </a></li>
                                     <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" href="#" onclick="downloadPdf('PO-2024-001')">
-                                        <i class="fas fa-file-pdf"></i> Download PDF
-                                    </a></li>
-                                </ul>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <input type="checkbox" class="form-check-input purchase-checkbox" value="PO-2024-002">
-                        </td>
-                        <td>
-                            <div>
-                                <strong>PO-2024-002</strong>
-                                <br><small class="text-muted">Raw Materials Procurement</small>
-                                <div class="mt-1">
-                                    <span class="badge bg-warning priority-medium">Medium Priority</span>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <div>
-                                <strong>Global Manufacturing Inc</strong>
-                                <br><small class="text-muted">sarah.wilson@globalmanuf.com</small>
-                                <br><small class="text-muted">+1 (555) 987-6543</small>
-                            </div>
-                        </td>
-                        <td>
-                            <div>
-                                <strong>8 Items</strong>
-                                <br><small class="text-muted">Steel Components (5), Plastic Parts (3)</small>
-                                <div class="progress mt-1" style="height: 4px;">
-                                    <div class="progress-bar bg-info" style="width: 65%"></div>
-                                </div>
-                                <small class="text-muted">65% Complete</small>
-                            </div>
-                        </td>
-                        <td>
-                            <div>
-                                <strong>$45,750.00</strong>
-                                <br><small class="text-warning">Paid: $20,000.00</small>
-                                <br><small class="text-danger">Balance: $25,750.00</small>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="status-badge status-ordered">Ordered</span>
-                            <br><small class="text-muted">In production</small>
-                        </td>
-                        <td>
-                            <div>
-                                <strong>Ordered:</strong> Feb 01, 2024
-                                <br><small class="text-muted">Expected: Feb 20, 2024</small>
-                                <br><small class="text-warning">3 days remaining</small>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="dropdown">
-                                <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                    Actions
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="{{ route('purchases.show', 'PO-2024-002') }}">
-                                        <i class="fas fa-eye"></i> View Details
-                                    </a></li>
-                                    <li><a class="dropdown-item" href="{{ route('purchases.edit', 'PO-2024-002') }}">
-                                        <i class="fas fa-edit"></i> Edit Order
-                                    </a></li>
-                                    <li><a class="dropdown-item" href="#" onclick="receiveOrder('PO-2024-002')">
-                                        <i class="fas fa-check"></i> Mark Received
-                                    </a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item text-danger" href="#" onclick="cancelOrder('PO-2024-002')">
+                                    @if($purchase->can_be_cancelled)
+                                    <li><a class="dropdown-item text-danger" href="#" onclick="cancelOrder('{{ $purchase->id }}')">
                                         <i class="fas fa-times"></i> Cancel Order
                                     </a></li>
+                                    @endif
                                 </ul>
                             </div>
                         </td>
                     </tr>
+                    @empty
                     <tr>
-                        <td>
-                            <input type="checkbox" class="form-check-input purchase-checkbox" value="PO-2024-003">
-                        </td>
-                        <td>
-                            <div>
-                                <strong>PO-2024-003</strong>
-                                <br><small class="text-muted">Consulting Services Package</small>
-                                <div class="mt-1">
-                                    <span class="badge bg-secondary priority-low">Low Priority</span>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <div>
-                                <strong>Premium Services Ltd</strong>
-                                <br><small class="text-muted">mike.brown@premiumservices.com</small>
-                                <br><small class="text-muted">+1 (555) 456-7890</small>
-                            </div>
-                        </td>
-                        <td>
-                            <div>
-                                <strong>1 Service</strong>
-                                <br><small class="text-muted">Business Consultation (40 Hours)</small>
-                                <div class="progress mt-1" style="height: 4px;">
-                                    <div class="progress-bar bg-warning" style="width: 0%"></div>
-                                </div>
-                                <small class="text-muted">Not started</small>
-                            </div>
-                        </td>
-                        <td>
-                            <div>
-                                <strong>$8,000.00</strong>
-                                <br><small class="text-danger">Paid: $0.00</small>
-                                <br><small class="text-danger">Balance: $8,000.00</small>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="status-badge status-pending">Pending</span>
-                            <br><small class="text-muted">Awaiting approval</small>
-                        </td>
-                        <td>
-                            <div>
-                                <strong>Created:</strong> Feb 10, 2024
-                                <br><small class="text-muted">Expected: Feb 25, 2024</small>
-                                <br><small class="text-info">Needs approval</small>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="dropdown">
-                                <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                    Actions
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="{{ route('purchases.show', 'PO-2024-003') }}">
-                                        <i class="fas fa-eye"></i> View Details
-                                    </a></li>
-                                    <li><a class="dropdown-item" href="{{ route('purchases.edit', 'PO-2024-003') }}">
-                                        <i class="fas fa-edit"></i> Edit Order
-                                    </a></li>
-                                    <li><a class="dropdown-item" href="#" onclick="approveOrder('PO-2024-003')">
-                                        <i class="fas fa-check"></i> Approve Order
-                                    </a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item text-danger" href="#" onclick="rejectOrder('PO-2024-003')">
-                                        <i class="fas fa-times"></i> Reject Order
-                                    </a></li>
-                                </ul>
+                        <td colspan="8" class="text-center py-5">
+                            <div class="text-muted">
+                                <i class="fas fa-inbox fa-3x mb-3"></i>
+                                <h5>No Purchase Orders Found</h5>
+                                <p>{{ request()->hasAny(['search', 'status', 'supplier_id', 'priority']) ? 'No orders match your current filters.' : 'Start by creating your first purchase order.' }}</p>
+                                <a href="{{ route('purchases.create') }}" class="btn btn-primary mt-2">
+                                    <i class="fas fa-plus"></i> Create Purchase Order
+                                </a>
                             </div>
                         </td>
                     </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
 
+        @if($purchases->hasPages())
         <!-- Pagination -->
         <div class="d-flex justify-content-between align-items-center p-3">
             <div class="text-muted">
-                Showing 1-3 of {{ $stats['total_purchases'] ?? '287' }} purchase orders
+                Showing {{ $purchases->firstItem() }}-{{ $purchases->lastItem() }} of {{ $purchases->total() }} purchase orders
             </div>
-            <nav>
-                <ul class="pagination pagination-sm mb-0">
-                    <li class="page-item disabled">
-                        <span class="page-link">Previous</span>
-                    </li>
-                    <li class="page-item active">
-                        <span class="page-link">1</span>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="#">2</a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="#">3</a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="#">Next</a>
-                    </li>
-                </ul>
-            </nav>
+            {{ $purchases->links() }}
         </div>
+        @endif
     </div>
 </div>
 
@@ -598,7 +582,7 @@
                     <button class="list-group-item list-group-item-action" onclick="bulkExport()">
                         <i class="fas fa-download text-primary"></i> Export Selected to Excel
                     </button>
-                    <button class="list-group-item list-group-item-action" onclick="bulkCancel()">
+                    <button class="list-group-item list-group-item-action text-danger" onclick="bulkCancel()">
                         <i class="fas fa-times text-danger"></i> Cancel Selected Orders
                     </button>
                 </div>
@@ -612,21 +596,9 @@
 <script>
 $(document).ready(function() {
     bindEventListeners();
-    loadPurchasesData();
 });
 
 function bindEventListeners() {
-    // Search functionality
-    $('#searchPurchases').on('input', function() {
-        const searchTerm = $(this).val().toLowerCase();
-        filterTable();
-    });
-
-    // Filter dropdowns
-    $('#statusFilter, #supplierFilter, #priorityFilter, #dateFilter').on('change', function() {
-        filterTable();
-    });
-
     // Select all checkbox
     $('#selectAll').on('change', function() {
         $('.purchase-checkbox').prop('checked', this.checked);
@@ -636,36 +608,19 @@ function bindEventListeners() {
     // Individual checkboxes
     $(document).on('change', '.purchase-checkbox', function() {
         updateBulkActionsButton();
+
+        // Update select all checkbox
+        const totalCheckboxes = $('.purchase-checkbox').length;
+        const checkedCheckboxes = $('.purchase-checkbox:checked').length;
+        $('#selectAll').prop('checked', totalCheckboxes === checkedCheckboxes);
     });
-}
 
-function filterTable() {
-    const searchTerm = $('#searchPurchases').val().toLowerCase();
-    const status = $('#statusFilter').val();
-    const supplier = $('#supplierFilter').val();
-    const priority = $('#priorityFilter').val();
-
-    $('#purchasesTableBody tr').each(function() {
-        let showRow = true;
-        const row = $(this);
-        const text = row.text().toLowerCase();
-
-        // Search filter
-        if (searchTerm && text.indexOf(searchTerm) === -1) {
-            showRow = false;
+    // Row click to navigate
+    $('.purchase-row').on('click', function(e) {
+        if (!$(e.target).is('input, button, a, .dropdown-toggle')) {
+            const purchaseId = $(this).data('id');
+            window.location.href = '{{ route("purchases.show", "") }}/' + purchaseId;
         }
-
-        // Status filter
-        if (status && !row.find('.status-badge').hasClass('status-' + status)) {
-            showRow = false;
-        }
-
-        // Priority filter
-        if (priority && !row.find('.badge').hasClass('priority-' + priority)) {
-            showRow = false;
-        }
-
-        row.toggle(showRow);
     });
 }
 
@@ -674,7 +629,7 @@ function updateBulkActionsButton() {
     if (selectedCount > 0) {
         if (!$('#bulkActionsBtn').length) {
             $('.table-header .col-md-6:last-child .btn-group').append(
-                '<button type="button" class="btn btn-outline-warning btn-sm" id="bulkActionsBtn" onclick="showBulkActions()">' +
+                '<button type="button" class="btn btn-warning btn-sm ms-2" id="bulkActionsBtn" onclick="showBulkActions()">' +
                 '<i class="fas fa-tasks"></i> Bulk (' + selectedCount + ')' +
                 '</button>'
             );
@@ -692,26 +647,7 @@ function showBulkActions() {
     $('#bulkActionsModal').modal('show');
 }
 
-function loadPurchasesData() {
-    // Simulate AJAX call to load purchase orders
-    console.log('Loading purchase orders data...');
-}
-
-function refreshTable() {
-    window.location.reload();
-}
-
-function clearFilters() {
-    $('#searchPurchases').val('');
-    $('#statusFilter, #supplierFilter, #priorityFilter, #dateFilter').val('');
-    filterTable();
-}
-
-function exportData() {
-    alert('Exporting purchase orders data to Excel...');
-}
-
-function bulkActions() {
+function toggleBulkActions() {
     if ($('.purchase-checkbox:checked').length === 0) {
         alert('Please select at least one purchase order.');
         return;
@@ -719,74 +655,141 @@ function bulkActions() {
     showBulkActions();
 }
 
-function approveOrder(poNumber) {
-    if (confirm(`Are you sure you want to approve purchase order ${poNumber}?`)) {
-        alert(`Purchase order ${poNumber} has been approved.`);
-        location.reload();
+function approveOrder(purchaseId) {
+    if (confirm('Are you sure you want to approve this purchase order?')) {
+        $.post('{{ route("purchases.approve", "") }}/' + purchaseId, {
+            _token: '{{ csrf_token() }}'
+        }).done(function(response) {
+            if (response.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + response.message);
+            }
+        }).fail(function() {
+            alert('An error occurred while approving the order.');
+        });
     }
 }
 
-function receiveOrder(poNumber) {
-    if (confirm(`Mark purchase order ${poNumber} as received?`)) {
-        alert(`Purchase order ${poNumber} has been marked as received.`);
-        location.reload();
+function receiveOrder(purchaseId) {
+    if (confirm('Mark this purchase order as received?')) {
+        $.post('{{ route("purchases.receive", "") }}/' + purchaseId, {
+            _token: '{{ csrf_token() }}'
+        }).done(function(response) {
+            if (response.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + response.message);
+            }
+        }).fail(function() {
+            alert('An error occurred while marking the order as received.');
+        });
     }
 }
 
-function cancelOrder(poNumber) {
-    if (confirm(`Are you sure you want to cancel purchase order ${poNumber}? This action cannot be undone.`)) {
-        alert(`Purchase order ${poNumber} has been cancelled.`);
-        location.reload();
+function cancelOrder(purchaseId) {
+    const reason = prompt('Please provide a reason for cancellation:');
+    if (reason && confirm('Are you sure you want to cancel this purchase order? This action cannot be undone.')) {
+        $.post('{{ route("purchases.cancel", "") }}/' + purchaseId, {
+            _token: '{{ csrf_token() }}',
+            reason: reason
+        }).done(function(response) {
+            if (response.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + response.message);
+            }
+        }).fail(function() {
+            alert('An error occurred while cancelling the order.');
+        });
     }
 }
 
-function rejectOrder(poNumber) {
-    if (confirm(`Are you sure you want to reject purchase order ${poNumber}?`)) {
-        alert(`Purchase order ${poNumber} has been rejected.`);
-        location.reload();
+function duplicateOrder(purchaseId) {
+    if (confirm('Create a duplicate of this purchase order?')) {
+        $.post('{{ route("purchases.duplicate", "") }}/' + purchaseId, {
+            _token: '{{ csrf_token() }}'
+        }).done(function(response) {
+            if (response.success) {
+                window.location.href = '{{ route("purchases.edit", "") }}/' + response.new_purchase_id;
+            } else {
+                alert('Error: ' + response.message);
+            }
+        }).fail(function() {
+            alert('An error occurred while duplicating the order.');
+        });
     }
-}
-
-function duplicateOrder(poNumber) {
-    if (confirm(`Create a duplicate of purchase order ${poNumber}?`)) {
-        alert(`Duplicate purchase order created based on ${poNumber}.`);
-    }
-}
-
-function downloadPdf(poNumber) {
-    alert(`Downloading PDF for purchase order ${poNumber}...`);
 }
 
 function bulkApprove() {
-    const selected = $('.purchase-checkbox:checked').length;
-    if (confirm(`Are you sure you want to approve ${selected} selected purchase orders?`)) {
-        alert(`${selected} purchase orders have been approved.`);
-        $('#bulkActionsModal').modal('hide');
-        location.reload();
+    const selected = $('.purchase-checkbox:checked').map(function() { return this.value; }).get();
+    if (confirm(`Are you sure you want to approve ${selected.length} selected purchase orders?`)) {
+        $.post('{{ route("purchases.bulk-approve") }}', {
+            _token: '{{ csrf_token() }}',
+            purchase_ids: selected
+        }).done(function(response) {
+            if (response.success) {
+                $('#bulkActionsModal').modal('hide');
+                location.reload();
+            } else {
+                alert('Error: ' + response.message);
+            }
+        }).fail(function() {
+            alert('An error occurred during bulk approval.');
+        });
     }
 }
 
 function bulkReceive() {
-    const selected = $('.purchase-checkbox:checked').length;
-    if (confirm(`Mark ${selected} selected purchase orders as received?`)) {
-        alert(`${selected} purchase orders have been marked as received.`);
-        $('#bulkActionsModal').modal('hide');
-        location.reload();
+    const selected = $('.purchase-checkbox:checked').map(function() { return this.value; }).get();
+    if (confirm(`Mark ${selected.length} selected purchase orders as received?`)) {
+        $.post('{{ route("purchases.bulk-receive") }}', {
+            _token: '{{ csrf_token() }}',
+            purchase_ids: selected
+        }).done(function(response) {
+            if (response.success) {
+                $('#bulkActionsModal').modal('hide');
+                location.reload();
+            } else {
+                alert('Error: ' + response.message);
+            }
+        }).fail(function() {
+            alert('An error occurred during bulk receive.');
+        });
     }
 }
 
 function bulkExport() {
-    const selected = $('.purchase-checkbox:checked').length;
-    alert(`Exporting ${selected} selected purchase orders to Excel...`);
+    const selected = $('.purchase-checkbox:checked').map(function() { return this.value; }).get();
+    const form = $('<form method="POST" action="{{ route("purchases.bulk-export") }}">');
+    form.append('<input type="hidden" name="_token" value="{{ csrf_token() }}">');
+    selected.forEach(id => {
+        form.append('<input type="hidden" name="purchase_ids[]" value="' + id + '">');
+    });
+    $('body').append(form);
+    form.submit();
+    form.remove();
     $('#bulkActionsModal').modal('hide');
 }
 
 function bulkCancel() {
-    const selected = $('.purchase-checkbox:checked').length;
-    if (confirm(`Are you sure you want to cancel ${selected} selected purchase orders? This action cannot be undone.`)) {
-        alert(`${selected} purchase orders have been cancelled.`);
-        $('#bulkActionsModal').modal('hide');
-        location.reload();
+    const selected = $('.purchase-checkbox:checked').map(function() { return this.value; }).get();
+    const reason = prompt('Please provide a reason for cancellation:');
+    if (reason && confirm(`Are you sure you want to cancel ${selected.length} selected purchase orders? This action cannot be undone.`)) {
+        $.post('{{ route("purchases.bulk-cancel") }}', {
+            _token: '{{ csrf_token() }}',
+            purchase_ids: selected,
+            reason: reason
+        }).done(function(response) {
+            if (response.success) {
+                $('#bulkActionsModal').modal('hide');
+                location.reload();
+            } else {
+                alert('Error: ' + response.message);
+            }
+        }).fail(function() {
+            alert('An error occurred during bulk cancellation.');
+        });
     }
 }
 </script>

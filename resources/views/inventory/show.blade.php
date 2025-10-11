@@ -214,7 +214,7 @@
                     </h6>
                 </div>
                 <div class="card-body">
-                    <h6 class="mb-2">{{ $inventory->supplier->name }}</h6>
+                    <h6 class="mb-2">{{ $inventory->supplier->company_name }}</h6>
                     <p class="text-muted small mb-2">{{ $inventory->supplier->email }}</p>
                     <p class="text-muted small mb-3">{{ $inventory->supplier->phone }}</p>
                     <div class="d-flex gap-2">
