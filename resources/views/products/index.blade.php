@@ -123,7 +123,7 @@
                                     <th>
                                         <input type="checkbox" id="selectAll" class="form-check-input">
                                     </th>
-                                    <th>SKU</th>
+                                    <th>Image</th>
                                     <th>Product Name</th>
                                     <th>Category</th>
                                     <th>Base Price</th>
@@ -294,13 +294,29 @@ function renderProductsTable(products) {
             '<span class="badge bg-info">Customizable</span>' :
             '<span class="badge bg-secondary">Standard</span>';
 
+        // Get product image
+        let productImage = '';
+        if (product.images && product.images.length > 0) {
+            productImage = `/storage/${product.images[0]}`;
+        } else {
+            productImage = '/images/placeholder-product.png'; // Placeholder image
+        }
+
         html += `
             <tr>
                 <td>
                     <input type="checkbox" class="form-check-input product-checkbox"
                            value="${product.id}" onchange="updateSelectedProducts()">
                 </td>
-                <td><code>${product.sku}</code></td>
+                <td>
+                    <div class="product-thumbnail">
+                        <img src="${productImage}"
+                             alt="${product.name}"
+                             class="img-thumbnail"
+                             onerror="this.src='/images/placeholder-product.png'">
+                        <small class="d-block text-muted text-center mt-1" style="font-size: 0.7rem;">${product.sku}</small>
+                    </div>
+                </td>
                 <td>
                     <div class="d-flex align-items-center">
                         <div>
@@ -508,4 +524,32 @@ function showAlert(message, type) {
     }, 5000);
 }
 </script>
+@endpush
+
+@push('styles')
+<style>
+.product-thumbnail {
+    width: 80px;
+    text-align: center;
+}
+
+.product-thumbnail img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    transition: transform 0.2s ease;
+}
+
+.product-thumbnail img:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Ensure table cell with image doesn't expand too much */
+#productsTable tbody td:nth-child(2) {
+    width: 100px;
+    padding: 0.75rem;
+}
+</style>
 @endpush

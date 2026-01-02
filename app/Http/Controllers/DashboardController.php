@@ -32,6 +32,42 @@ class DashboardController extends Controller
         $today = Carbon::today();
         $thisMonth = Carbon::now()->startOfMonth();
         $lastMonth = Carbon::now()->subMonth()->startOfMonth();
+        $lastMonthEnd = Carbon::now()->subMonth()->endOfMonth();
+
+        // Current month revenue
+        $monthlyRevenue = Order::where('created_at', '>=', $thisMonth)
+            ->where('status', '!=', 'cancelled')
+            ->sum('total_amount');
+
+        // Last month revenue for comparison
+        $lastMonthRevenue = Order::whereBetween('created_at', [$lastMonth, $lastMonthEnd])
+            ->where('status', '!=', 'cancelled')
+            ->sum('total_amount');
+
+        // Calculate revenue growth
+        $revenueGrowth = $lastMonthRevenue > 0
+            ? (($monthlyRevenue - $lastMonthRevenue) / $lastMonthRevenue) * 100
+            : 0;
+
+        // Calculate monthly COGS (Cost of Goods Sold)
+        $monthlyCogs = DB::table('order_items')
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->join('inventories', 'order_items.product_id', '=', 'inventories.product_id')
+            ->where('orders.created_at', '>=', $thisMonth)
+            ->whereNotIn('orders.status', ['cancelled'])
+            ->selectRaw('SUM(order_items.quantity * inventories.cost_per_unit) as total_cogs')
+            ->value('total_cogs') ?? 0;
+
+        // Calculate gross profit
+        $monthlyProfit = $monthlyRevenue - $monthlyCogs;
+        $profitMargin = $monthlyRevenue > 0 ? ($monthlyProfit / $monthlyRevenue) * 100 : 0;
+
+        // Today's stats
+        $todayRevenue = Order::whereDate('created_at', $today)
+            ->where('status', '!=', 'cancelled')
+            ->sum('total_amount');
+
+        $todayOrders = Order::whereDate('created_at', $today)->count();
 
         return [
             'total_orders' => Order::count(),
@@ -39,10 +75,14 @@ class DashboardController extends Controller
             'total_customers' => Customer::count(),
             'total_products' => Product::count(),
             'low_stock_items' => Inventory::lowStock()->count(),
-            'monthly_revenue' => Order::where('created_at', '>=', $thisMonth)
-                ->where('status', '!=', 'cancelled')
-                ->sum('total_amount'),
+            'monthly_revenue' => $monthlyRevenue,
+            'monthly_cogs' => $monthlyCogs,
+            'monthly_profit' => $monthlyProfit,
+            'profit_margin' => $profitMargin,
+            'revenue_growth' => $revenueGrowth,
             'monthly_orders' => Order::where('created_at', '>=', $thisMonth)->count(),
+            'today_revenue' => $todayRevenue,
+            'today_orders' => $todayOrders,
             'pending_invoices' => Invoice::where('status', '!=', 'paid')->count(),
             'pending_shipments' => Shipment::where('status', 'pending')->count(),
             'total_suppliers' => \App\Models\Supplier::count(),
