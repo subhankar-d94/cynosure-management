@@ -303,11 +303,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/', [AnalyticsController::class, 'index'])->name('index');
         Route::get('/dashboard', [AnalyticsController::class, 'dashboard'])->name('dashboard');
         Route::get('/dashboard-data', [AnalyticsController::class, 'getDashboardData'])->name('dashboard-data');
+        Route::get('/profit-loss', [AnalyticsController::class, 'profitLoss'])->name('profit-loss');
         Route::get('/trends', [AnalyticsController::class, 'trends'])->name('trends');
         Route::get('/forecasting', [AnalyticsController::class, 'forecasting'])->name('forecasting');
         Route::get('/cohort', [AnalyticsController::class, 'cohortAnalysis'])->name('cohort');
         Route::get('/data/{type}', [AnalyticsController::class, 'getData'])->name('data');
         Route::get('/trends/{type}', [AnalyticsController::class, 'getTrendData'])->name('trends.data');
+
+        // Analytics API endpoints (using web routes for session auth)
+        Route::get('/profit-loss-data', [AnalyticsController::class, 'getProfitLossData'])->name('profit-loss-data');
+        Route::get('/revenue-vs-cost', [AnalyticsController::class, 'getRevenueVsCost'])->name('revenue-vs-cost');
     });
 
     // Address Routes (Google Places Integration)

@@ -14,6 +14,9 @@
                         <p class="text-muted mb-0">Real-time insights and performance metrics for your business</p>
                     </div>
                     <div class="d-flex gap-2">
+                        <a href="{{ route('analytics.profit-loss') }}" class="btn btn-success">
+                            <i class="fas fa-chart-bar"></i> Profit & Loss
+                        </a>
                         <div class="dropdown">
                             <button class="btn btn-light border dropdown-toggle" type="button" data-bs-toggle="dropdown">
                                 <i class="fas fa-calendar-alt text-primary"></i> <span id="selectedPeriod">Last 30 Days</span>

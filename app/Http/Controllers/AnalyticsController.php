@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Inventory;
+use App\Models\Purchase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -438,5 +439,174 @@ class AnalyticsController extends Controller
     public function getSalesChart($period = '30')
     {
         return $this->getSalesData($period);
+    }
+
+    // Profit & Loss Analytics
+    public function profitLoss(Request $request)
+    {
+        $startDate = $request->get('start_date', Carbon::now()->subMonth()->toDateString());
+        $endDate = $request->get('end_date', Carbon::now()->toDateString());
+        $groupBy = $request->get('group_by', 'day'); // day, week, month
+
+        return view('analytics.profit-loss', compact('startDate', 'endDate', 'groupBy'));
+    }
+
+    public function getProfitLossData(Request $request)
+    {
+        $startDate = $request->get('start_date', Carbon::now()->subMonth()->toDateString());
+        $endDate = $request->get('end_date', Carbon::now()->toDateString());
+
+        // Calculate Revenue (from completed/confirmed orders)
+        $revenue = Order::whereBetween('order_date', [$startDate, $endDate])
+            ->whereNotIn('status', ['cancelled'])
+            ->sum('total_amount');
+
+        // Calculate COGS (Cost of Goods Sold) - using inventory cost_per_unit
+        $cogs = DB::table('order_items')
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->join('inventories', 'order_items.product_id', '=', 'inventories.product_id')
+            ->whereBetween('orders.order_date', [$startDate, $endDate])
+            ->whereNotIn('orders.status', ['cancelled'])
+            ->selectRaw('SUM(order_items.quantity * inventories.cost_per_unit) as total_cogs')
+            ->value('total_cogs') ?? 0;
+
+        // Calculate Purchase Costs (total spend on purchases)
+        $purchaseCosts = DB::table('purchase_orders')
+            ->whereBetween('purchase_date', [$startDate, $endDate])
+            ->whereNotIn('status', ['cancelled'])
+            ->sum('total_amount') ?? 0;
+
+        // Calculate Gross Profit
+        $grossProfit = $revenue - $cogs;
+        $grossProfitMargin = $revenue > 0 ? ($grossProfit / $revenue) * 100 : 0;
+
+        // Get top profitable products
+        $topProducts = DB::table('order_items')
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->join('products', 'order_items.product_id', '=', 'products.id')
+            ->join('inventories', 'order_items.product_id', '=', 'inventories.product_id')
+            ->whereBetween('orders.order_date', [$startDate, $endDate])
+            ->whereNotIn('orders.status', ['cancelled'])
+            ->selectRaw('
+                products.name as product_name,
+                products.sku,
+                SUM(order_items.quantity) as units_sold,
+                SUM(order_items.quantity * order_items.unit_price) as revenue,
+                SUM(order_items.quantity * inventories.cost_per_unit) as cogs,
+                SUM(order_items.quantity * order_items.unit_price) - SUM(order_items.quantity * inventories.cost_per_unit) as profit
+            ')
+            ->groupBy('products.id', 'products.name', 'products.sku')
+            ->orderByDesc('profit')
+            ->limit(10)
+            ->get();
+
+        // Get profit by category
+        $categoryProfit = DB::table('order_items')
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->join('products', 'order_items.product_id', '=', 'products.id')
+            ->join('categories', 'products.category_id', '=', 'categories.id')
+            ->join('inventories', 'order_items.product_id', '=', 'inventories.product_id')
+            ->whereBetween('orders.order_date', [$startDate, $endDate])
+            ->whereNotIn('orders.status', ['cancelled'])
+            ->selectRaw('
+                categories.name as category_name,
+                SUM(order_items.quantity * order_items.unit_price) as revenue,
+                SUM(order_items.quantity * inventories.cost_per_unit) as cogs,
+                SUM(order_items.quantity * order_items.unit_price) - SUM(order_items.quantity * inventories.cost_per_unit) as profit
+            ')
+            ->groupBy('categories.id', 'categories.name')
+            ->orderByDesc('profit')
+            ->get();
+
+        // Get daily profit trend
+        $dailyProfit = DB::table('orders')
+            ->join('order_items', 'orders.id', '=', 'order_items.order_id')
+            ->join('inventories', 'order_items.product_id', '=', 'inventories.product_id')
+            ->whereBetween('orders.order_date', [$startDate, $endDate])
+            ->whereNotIn('orders.status', ['cancelled'])
+            ->selectRaw('
+                DATE(orders.order_date) as date,
+                SUM(order_items.quantity * order_items.unit_price) as revenue,
+                SUM(order_items.quantity * inventories.cost_per_unit) as cogs,
+                SUM(order_items.quantity * order_items.unit_price) - SUM(order_items.quantity * inventories.cost_per_unit) as profit
+            ')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'summary' => [
+                    'revenue' => round($revenue, 2),
+                    'cogs' => round($cogs, 2),
+                    'gross_profit' => round($grossProfit, 2),
+                    'gross_profit_margin' => round($grossProfitMargin, 2),
+                    'purchase_costs' => round($purchaseCosts, 2),
+                ],
+                'top_products' => $topProducts,
+                'category_profit' => $categoryProfit,
+                'daily_profit' => $dailyProfit,
+            ]
+        ]);
+    }
+
+    public function getRevenueVsCost(Request $request)
+    {
+        $period = $request->get('period', '30');
+        $startDate = Carbon::now()->subDays($period);
+
+        $data = DB::table('orders')
+            ->join('order_items', 'orders.id', '=', 'order_items.order_id')
+            ->leftJoin('inventories', 'order_items.product_id', '=', 'inventories.product_id')
+            ->whereBetween('orders.order_date', [$startDate, Carbon::now()])
+            ->whereNotIn('orders.status', ['cancelled'])
+            ->selectRaw('
+                DATE(orders.order_date) as date,
+                SUM(order_items.quantity * order_items.unit_price) as revenue,
+                SUM(order_items.quantity * COALESCE(inventories.cost_per_unit, 0)) as cost
+            ')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+
+        $labels = [];
+        $revenue = [];
+        $cost = [];
+        $profit = [];
+
+        foreach ($data as $row) {
+            $labels[] = Carbon::parse($row->date)->format('M d');
+            $revenue[] = round($row->revenue, 2);
+            $cost[] = round($row->cost, 2);
+            $profit[] = round($row->revenue - $row->cost, 2);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'labels' => $labels,
+                'datasets' => [
+                    [
+                        'label' => 'Revenue (₹)',
+                        'data' => $revenue,
+                        'borderColor' => '#198754',
+                        'backgroundColor' => 'rgba(25, 135, 84, 0.1)',
+                    ],
+                    [
+                        'label' => 'Cost (₹)',
+                        'data' => $cost,
+                        'borderColor' => '#dc3545',
+                        'backgroundColor' => 'rgba(220, 53, 69, 0.1)',
+                    ],
+                    [
+                        'label' => 'Profit (₹)',
+                        'data' => $profit,
+                        'borderColor' => '#0d6efd',
+                        'backgroundColor' => 'rgba(13, 110, 253, 0.1)',
+                    ]
+                ]
+            ]
+        ]);
     }
 }

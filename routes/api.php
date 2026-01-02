@@ -85,6 +85,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/orders/{period}', [AnalyticsController::class, 'getOrderData'])->name('orders');
         Route::get('/revenue/{period}', [AnalyticsController::class, 'getRevenueData'])->name('revenue');
         Route::get('/trends/{type}', [AnalyticsController::class, 'getTrendData'])->name('trends');
+        // Note: profit-loss-data and revenue-vs-cost moved to web.php for session-based auth
     });
 
     // Reports API
