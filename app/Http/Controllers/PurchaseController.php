@@ -71,7 +71,7 @@ class PurchaseController extends Controller
     public function create(): View
     {
         $suppliers = Supplier::where('status', 'active')
-                          ->orderBy('name')
+                          ->orderBy('company_name')
                           ->get();
 
         return view('purchases.create', compact('suppliers'));
@@ -204,7 +204,7 @@ class PurchaseController extends Controller
         }
 
         $suppliers = Supplier::where('status', 'active')
-                          ->orderBy('name')
+                          ->orderBy('company_name')
                           ->get();
 
         $purchase->load('items');
