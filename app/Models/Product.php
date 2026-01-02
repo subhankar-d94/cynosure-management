@@ -72,4 +72,55 @@ class Product extends Model
     {
         return !empty($this->images);
     }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($product) {
+            if (empty($product->sku)) {
+                $product->sku = static::generateSku($product->category_id);
+            }
+        });
+    }
+
+    public static function generateSku($categoryId): string
+    {
+        $category = Category::find($categoryId);
+        if (!$category) {
+            throw new \Exception('Category not found for SKU generation');
+        }
+
+        // Create category prefix from name (first 3 letters, uppercase)
+        $categoryPrefix = strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $category->name), 0, 3));
+
+        // If category name is too short, pad with 'X'
+        $categoryPrefix = str_pad($categoryPrefix, 3, 'X');
+
+        // Get the next sequential number for this category
+        $lastProduct = static::where('category_id', $categoryId)
+                            ->where('sku', 'LIKE', $categoryPrefix . '%')
+                            ->orderBy('sku', 'desc')
+                            ->first();
+
+        $sequenceNumber = 1;
+        if ($lastProduct && preg_match('/(\d+)$/', $lastProduct->sku, $matches)) {
+            $sequenceNumber = (int)$matches[1] + 1;
+        }
+
+        // Format: CAT0001, CAT0002, etc.
+        return $categoryPrefix . str_pad($sequenceNumber, 4, '0', STR_PAD_LEFT);
+    }
+
+    public function regenerateSku(): string
+    {
+        $this->sku = static::generateSku($this->category_id);
+        $this->save();
+        return $this->sku;
+    }
+
+    public function getFormattedSkuAttribute(): string
+    {
+        return $this->sku ?? 'Auto-generated';
+    }
 }

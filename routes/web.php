@@ -99,6 +99,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/export', [ProductController::class, 'export'])->name('export');
         Route::get('/data/list', [ProductController::class, 'getData'])->name('data');
         Route::get('/data/for-order', [ProductController::class, 'getForOrder'])->name('for-order');
+        Route::post('/preview-sku', [ProductController::class, 'previewSku'])->name('preview-sku');
     });
 
     // Inventory Routes

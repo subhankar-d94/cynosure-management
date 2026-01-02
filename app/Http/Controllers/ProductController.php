@@ -82,7 +82,7 @@ class ProductController extends Controller
             'dimensions.width' => 'nullable|numeric|min:0',
             'dimensions.height' => 'nullable|numeric|min:0',
             'is_customizable' => 'boolean',
-            'sku' => 'required|string|max:50|unique:products,sku',
+            'sku' => 'nullable|string|max:50|unique:products,sku',
             'initial_stock' => 'nullable|integer|min:0',
             'reorder_level' => 'nullable|integer|min:0',
             'cost_per_unit' => 'nullable|numeric|min:0',
@@ -109,7 +109,7 @@ class ProductController extends Controller
                 'weight' => $request->weight,
                 'dimensions' => $request->dimensions,
                 'is_customizable' => $request->boolean('is_customizable'),
-                'sku' => $request->sku
+                'sku' => $request->sku ?: null // Let model auto-generate if empty
             ]);
 
             // Handle image uploads
@@ -197,7 +197,7 @@ class ProductController extends Controller
             'dimensions.width' => 'nullable|numeric|min:0',
             'dimensions.height' => 'nullable|numeric|min:0',
             'is_customizable' => 'boolean',
-            'sku' => 'required|string|max:50|unique:products,sku,' . $product->id,
+            'sku' => 'nullable|string|max:50|unique:products,sku,' . $product->id,
             'product_images' => 'nullable|array',
             'product_images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
             'images_to_remove' => 'nullable|array',
@@ -212,7 +212,8 @@ class ProductController extends Controller
         }
 
         try {
-            $product->update([
+            // If category changed and SKU is empty or auto-generated, regenerate SKU
+            $updateData = [
                 'name' => $request->name,
                 'category_id' => $request->category_id,
                 'description' => $request->description,
@@ -220,8 +221,17 @@ class ProductController extends Controller
                 'weight' => $request->weight,
                 'dimensions' => $request->dimensions,
                 'is_customizable' => $request->boolean('is_customizable'),
-                'sku' => $request->sku
-            ]);
+            ];
+
+            // Handle SKU update
+            if ($request->filled('sku')) {
+                $updateData['sku'] = $request->sku;
+            } elseif ($product->category_id != $request->category_id) {
+                // Category changed and no SKU provided, regenerate
+                $updateData['sku'] = Product::generateSku($request->category_id);
+            }
+
+            $product->update($updateData);
 
             // Handle image operations
             $imageUploadService = new ImageUploadService();
@@ -631,6 +641,26 @@ class ProductController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    public function previewSku(Request $request): JsonResponse
+    {
+        $request->validate([
+            'category_id' => 'required|exists:categories,id'
+        ]);
+
+        try {
+            $sku = Product::generateSku($request->category_id);
+            return response()->json([
+                'success' => true,
+                'sku' => $sku
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate SKU: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     private function generateUniqueSku(string $baseSku): string

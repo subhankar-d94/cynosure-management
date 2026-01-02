@@ -51,9 +51,14 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label for="sku" class="form-label">SKU <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="sku" name="sku" required>
-                                <div class="form-text">Unique product identifier</div>
+                                <label for="sku" class="form-label">SKU</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="sku" name="sku" placeholder="Auto-generated based on category">
+                                    <button type="button" class="btn btn-outline-secondary" id="generateSkuBtn" disabled>
+                                        <i class="bi bi-arrow-clockwise"></i> Generate
+                                    </button>
+                                </div>
+                                <div class="form-text">Leave empty to auto-generate based on category and sequence</div>
                                 <div class="invalid-feedback">Please provide a unique SKU.</div>
                             </div>
 
@@ -257,11 +262,25 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // Auto-generate SKU based on product name
-    $('#name').on('input', function() {
-        if (!$('#sku').val()) {
-            const sku = generateSKU($(this).val());
-            $('#sku').val(sku);
+    // Enable/disable SKU generation button based on category selection
+    $('#category_id').on('change', function() {
+        const categoryId = $(this).val();
+        if (categoryId) {
+            $('#generateSkuBtn').prop('disabled', false);
+            // Auto-generate SKU when category is selected and SKU is empty
+            if (!$('#sku').val()) {
+                generateSkuFromCategory(categoryId);
+            }
+        } else {
+            $('#generateSkuBtn').prop('disabled', true);
+        }
+    });
+
+    // Manual SKU generation button
+    $('#generateSkuBtn').on('click', function() {
+        const categoryId = $('#category_id').val();
+        if (categoryId) {
+            generateSkuFromCategory(categoryId);
         }
     });
 
@@ -283,6 +302,27 @@ $(document).ready(function() {
         }
     });
 });
+
+function generateSkuFromCategory(categoryId) {
+    $.post('{{ route("products.preview-sku") }}', {
+        _token: '{{ csrf_token() }}',
+        category_id: categoryId
+    })
+    .done(function(response) {
+        if (response.success) {
+            $('#sku').val(response.sku);
+            // Show a subtle indicator that SKU was generated
+            $('#sku').addClass('border-success').delay(2000).queue(function() {
+                $(this).removeClass('border-success').dequeue();
+            });
+        } else {
+            showError('Failed to generate SKU: ' + response.message);
+        }
+    })
+    .fail(function() {
+        showError('Error generating SKU. Please try again.');
+    });
+}
 
 function generateSKU(productName) {
     // Remove special characters and convert to uppercase
