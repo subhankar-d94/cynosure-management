@@ -81,63 +81,29 @@ class PurchaseController extends Controller
     {
         $validated = $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
-            'reference_number' => 'nullable|string|max:255',
-            'purchase_date' => 'required|date',
-            'expected_delivery_date' => 'nullable|date|after_or_equal:purchase_date',
-            'priority' => ['required', Rule::in(['low', 'medium', 'high', 'urgent'])],
-            'currency' => 'required|string|size:3',
-            'payment_terms' => 'required|string|max:255',
-            'delivery_terms' => 'required|string|max:255',
-            'delivery_address' => 'nullable|string',
-            'delivery_city' => 'nullable|string|max:255',
-            'delivery_state' => 'nullable|string|max:255',
-            'delivery_pincode' => 'nullable|string|max:10',
-            'delivery_country' => 'required|string|max:255',
-            'department' => 'nullable|string|max:255',
-            'project_code' => 'nullable|string|max:100',
-            'budget_code' => 'nullable|string|max:100',
-            'urgent' => 'boolean',
-            'requires_approval' => 'boolean',
-            'approval_limit' => 'nullable|numeric|min:0',
-            'notes' => 'nullable|string',
-            'internal_notes' => 'nullable|string',
-            'terms_conditions' => 'nullable|string',
+            'order_date' => 'required|date',
             'items' => 'required|array|min:1',
             'items.*.description' => 'required|string|max:500',
-            'items.*.sku' => 'nullable|string|max:100',
-            'items.*.unit' => 'required|string|max:50',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
-            'items.*.tax_rate' => 'required|numeric|min:0|max:100',
-            'items.*.notes' => 'nullable|string|max:500',
-            'shipping_cost' => 'nullable|numeric|min:0',
-            'discount_amount' => 'nullable|numeric|min:0',
-            'attachments' => 'nullable|array',
-            'attachments.*' => 'file|max:10240', // 10MB max
-            'tags' => 'nullable|array',
-            'tags.*' => 'string|max:50'
         ]);
 
         try {
             DB::beginTransaction();
 
-            // Handle file uploads
-            $attachments = [];
-            if ($request->hasFile('attachments')) {
-                foreach ($request->file('attachments') as $file) {
-                    $path = $file->store('purchases/attachments', 'public');
-                    $attachments[] = [
-                        'name' => $file->getClientOriginalName(),
-                        'path' => $path,
-                        'size' => $file->getSize(),
-                        'type' => $file->getMimeType()
-                    ];
-                }
-            }
-            $validated['attachments'] = $attachments;
-
-            // Set created_by
+            // Generate purchase order number
+            $poNumber = 'PO-' . date('Y') . '-' . str_pad(Purchase::count() + 1, 4, '0', STR_PAD_LEFT);
+            $validated['purchase_order_number'] = $poNumber;
+            $validated['reference_number'] = $poNumber;
+            $validated['purchase_date'] = $validated['order_date'];
+            $validated['status'] = 'draft';
             $validated['created_by'] = Auth::id();
+
+            // Set defaults for required fields
+            $validated['payment_terms'] = 'Net 30';
+            $validated['delivery_terms'] = 'Ex-Works';
+            $validated['delivery_country'] = 'India';
+            $validated['currency'] = 'INR';
 
             // Create purchase order
             $purchase = Purchase::create($validated);
@@ -145,6 +111,11 @@ class PurchaseController extends Controller
             // Create purchase items
             foreach ($validated['items'] as $itemData) {
                 $itemData['purchase_id'] = $purchase->id;
+                $itemData['material_name'] = $itemData['description']; // Use description as material name
+                $itemData['unit_cost'] = $itemData['unit_price']; // Same as unit_price
+                $itemData['subtotal'] = $itemData['quantity'] * $itemData['unit_price']; // Calculate subtotal
+                $itemData['tax_rate'] = 0; // No tax
+                $itemData['unit'] = 'pcs'; // Default unit
                 PurchaseItem::create($itemData);
             }
 
@@ -228,104 +199,67 @@ class PurchaseController extends Controller
 
         $validated = $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
-            'reference_number' => 'nullable|string|max:255',
-            'purchase_date' => 'required|date',
-            'expected_delivery_date' => 'nullable|date|after_or_equal:purchase_date',
-            'priority' => ['required', Rule::in(['low', 'medium', 'high', 'urgent'])],
-            'currency' => 'required|string|size:3',
-            'payment_terms' => 'required|string|max:255',
-            'delivery_terms' => 'required|string|max:255',
-            'delivery_address' => 'nullable|string',
-            'delivery_city' => 'nullable|string|max:255',
-            'delivery_state' => 'nullable|string|max:255',
-            'delivery_pincode' => 'nullable|string|max:10',
-            'delivery_country' => 'required|string|max:255',
-            'department' => 'nullable|string|max:255',
-            'project_code' => 'nullable|string|max:100',
-            'budget_code' => 'nullable|string|max:100',
-            'urgent' => 'boolean',
-            'requires_approval' => 'boolean',
-            'approval_limit' => 'nullable|numeric|min:0',
-            'notes' => 'nullable|string',
-            'internal_notes' => 'nullable|string',
-            'terms_conditions' => 'nullable|string',
+            'order_date' => 'required|date',
+            'status' => 'required|in:draft,pending,approved,completed,cancelled',
             'items' => 'required|array|min:1',
             'items.*.id' => 'nullable|exists:purchase_items,id',
             'items.*.description' => 'required|string|max:500',
-            'items.*.sku' => 'nullable|string|max:100',
-            'items.*.unit' => 'required|string|max:50',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
-            'items.*.tax_rate' => 'required|numeric|min:0|max:100',
-            'items.*.notes' => 'nullable|string|max:500',
-            'shipping_cost' => 'nullable|numeric|min:0',
-            'discount_amount' => 'nullable|numeric|min:0',
-            'new_attachments' => 'nullable|array',
-            'new_attachments.*' => 'file|max:10240',
-            'remove_attachments' => 'nullable|array',
-            'tags' => 'nullable|array',
-            'tags.*' => 'string|max:50'
         ]);
 
         try {
             DB::beginTransaction();
 
-            // Handle file uploads
-            $attachments = $purchase->attachments ?? [];
-
-            // Remove attachments
-            if ($request->filled('remove_attachments')) {
-                foreach ($request->remove_attachments as $index) {
-                    if (isset($attachments[$index])) {
-                        Storage::disk('public')->delete($attachments[$index]['path']);
-                        unset($attachments[$index]);
-                    }
-                }
-                $attachments = array_values($attachments); // Re-index array
-            }
-
-            // Add new attachments
-            if ($request->hasFile('new_attachments')) {
-                foreach ($request->file('new_attachments') as $file) {
-                    $path = $file->store('purchases/attachments', 'public');
-                    $attachments[] = [
-                        'name' => $file->getClientOriginalName(),
-                        'path' => $path,
-                        'size' => $file->getSize(),
-                        'type' => $file->getMimeType()
-                    ];
-                }
-            }
-            $validated['attachments'] = $attachments;
+            // Map order_date to purchase_date
+            $validated['purchase_date'] = $validated['order_date'];
+            unset($validated['order_date']);
 
             // Set updated_by
             $validated['updated_by'] = Auth::id();
 
-            // Increment version
-            $validated['version'] = $purchase->version + 1;
-
-            // Update purchase order
+            // Update purchase order (without items)
+            $items = $validated['items'];
+            unset($validated['items']);
             $purchase->update($validated);
 
             // Update purchase items
-            $existingItemIds = collect($validated['items'])
+            $existingItemIds = collect($items)
                               ->pluck('id')
                               ->filter()
                               ->toArray();
 
             // Delete items that are no longer present
-            $purchase->items()->whereNotIn('id', $existingItemIds)->delete();
+            if (!empty($existingItemIds)) {
+                $purchase->items()->whereNotIn('id', $existingItemIds)->delete();
+            } else {
+                // If no existing items, delete all
+                $purchase->items()->delete();
+            }
 
             // Update or create items
-            foreach ($validated['items'] as $itemData) {
+            foreach ($items as $itemData) {
                 if (isset($itemData['id'])) {
                     // Update existing item
+                    $updateData = [
+                        'description' => $itemData['description'],
+                        'material_name' => $itemData['description'],
+                        'quantity' => $itemData['quantity'],
+                        'unit_price' => $itemData['unit_price'],
+                        'unit_cost' => $itemData['unit_price'],
+                        'subtotal' => $itemData['quantity'] * $itemData['unit_price'],
+                    ];
                     PurchaseItem::where('id', $itemData['id'])
                                ->where('purchase_id', $purchase->id)
-                               ->update($itemData);
+                               ->update($updateData);
                 } else {
                     // Create new item
                     $itemData['purchase_id'] = $purchase->id;
+                    $itemData['material_name'] = $itemData['description'];
+                    $itemData['unit_cost'] = $itemData['unit_price'];
+                    $itemData['subtotal'] = $itemData['quantity'] * $itemData['unit_price'];
+                    $itemData['tax_rate'] = 0;
+                    $itemData['unit'] = 'pcs';
                     PurchaseItem::create($itemData);
                 }
             }
@@ -814,20 +748,12 @@ class PurchaseController extends Controller
     private function getPurchaseStatistics(): array
     {
         return [
-            'total_purchases' => Purchase::count(),
-            'total_value' => Purchase::sum('total_amount'),
-            'pending_orders' => Purchase::byStatus(Purchase::STATUS_PENDING)->count(),
-            'overdue_orders' => Purchase::overdue()->count(),
-            'monthly_orders' => Purchase::whereMonth('created_at', now()->month)
-                                     ->whereYear('created_at', now()->year)
-                                     ->count(),
-            'avg_delivery_days' => 15, // TODO: Calculate actual average
-            'active_suppliers' => Supplier::where('status', 'active')->count(),
-            'cost_savings' => 0, // TODO: Calculate actual cost savings
-            'draft' => Purchase::byStatus(Purchase::STATUS_DRAFT)->count(),
-            'approved' => Purchase::byStatus(Purchase::STATUS_APPROVED)->count(),
-            'ordered' => Purchase::byStatus(Purchase::STATUS_ORDERED)->count(),
-            'received' => Purchase::byStatus(Purchase::STATUS_RECEIVED)->count(),
+            'total' => Purchase::count(),
+            'draft' => Purchase::where('status', 'draft')->count(),
+            'pending' => Purchase::where('status', 'pending')->count(),
+            'approved' => Purchase::where('status', 'approved')->count(),
+            'completed' => Purchase::where('status', 'completed')->count(),
+            'cancelled' => Purchase::where('status', 'cancelled')->count(),
         ];
     }
 }
