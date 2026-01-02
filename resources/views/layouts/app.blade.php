@@ -277,20 +277,6 @@
                         <i class="bi bi-bag-plus"></i>Purchases
                     </a>
                 </li>
-
-                <hr class="text-white-50 my-3">
-
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('analytics*') ? 'active' : '' }}" href="{{ route('analytics.index') }}">
-                        <i class="bi bi-graph-up"></i>Analytics
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('reports*') ? 'active' : '' }}" href="{{ route('reports.index') }}">
-                        <i class="bi bi-file-earmark-text"></i>Reports
-                    </a>
-                </li>
             </ul>
         </div>
     </nav>
