@@ -35,9 +35,7 @@
         @foreach($categories as $category)
         @php
             $categoryProducts = \App\Models\Product::where('category_id', $category->id)
-                ->whereNotNull('images')
-                ->where('images', '!=', '[]')
-                ->with('category')
+                ->with(['category', 'inventory'])
                 ->orderBy('name')
                 ->get();
         @endphp
@@ -76,6 +74,18 @@
                                 <i class="bi bi-image"></i>
                             </div>
                         @endif
+
+                        @php
+                            $inventory = $product->inventory;
+                            $stockQty = $inventory ? $inventory->quantity_in_stock : 0;
+                            $isInStock = $stockQty > 0;
+                        @endphp
+
+                        <!-- Stock Status Badge -->
+                        <span class="product-badge-stock {{ $isInStock ? 'in-stock' : 'out-of-stock' }}">
+                            <i class="bi bi-{{ $isInStock ? 'check-circle-fill' : 'x-circle-fill' }}"></i>
+                            {{ $isInStock ? 'In Stock' : 'Out of Stock' }}
+                        </span>
 
                         @if($product->is_customizable)
                         <span class="product-badge-custom">
@@ -376,6 +386,31 @@ use Illuminate\Support\Facades\Storage;
     justify-content: center;
     font-size: 4rem;
     color: #dee2e6;
+}
+
+.product-badge-stock {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.product-badge-stock.in-stock {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.product-badge-stock.out-of-stock {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
 .product-badge-custom {
