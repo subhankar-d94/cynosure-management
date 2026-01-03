@@ -101,7 +101,7 @@ class Purchase extends Model
     ];
 
     protected $attributes = [
-        'status' => 'draft',
+        'status' => 'approved',
         'priority' => 'medium',
         'currency' => 'INR',
         'payment_terms' => 'Net 30',

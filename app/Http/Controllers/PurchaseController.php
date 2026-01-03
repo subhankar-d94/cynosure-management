@@ -96,7 +96,7 @@ class PurchaseController extends Controller
             $validated['purchase_order_number'] = $poNumber;
             $validated['reference_number'] = $poNumber;
             $validated['purchase_date'] = $validated['order_date'];
-            $validated['status'] = 'draft';
+            $validated['status'] = 'approved';
             $validated['created_by'] = Auth::id();
 
             // Set defaults for required fields
@@ -292,6 +292,54 @@ class PurchaseController extends Controller
 
             return back()->withInput()
                         ->withErrors(['error' => 'Failed to update purchase order: ' . $e->getMessage()]);
+        }
+    }
+
+    public function updateStatus(Request $request, Purchase $purchase): JsonResponse|RedirectResponse
+    {
+        $validated = $request->validate([
+            'status' => ['required', Rule::in([
+                Purchase::STATUS_DRAFT,
+                Purchase::STATUS_PENDING,
+                Purchase::STATUS_APPROVED,
+                Purchase::STATUS_ORDERED,
+                Purchase::STATUS_PARTIAL_RECEIVED,
+                Purchase::STATUS_RECEIVED,
+                Purchase::STATUS_CANCELLED,
+                Purchase::STATUS_COMPLETED
+            ])]
+        ]);
+
+        try {
+            $oldStatus = $purchase->status;
+            $purchase->update([
+                'status' => $validated['status'],
+                'updated_by' => Auth::id()
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Status updated successfully',
+                    'data' => [
+                        'status' => $purchase->status,
+                        'status_label' => $purchase->status_label,
+                        'status_color' => $purchase->status_color
+                    ]
+                ]);
+            }
+
+            return redirect()->back()->with('success', 'Purchase order status updated from ' . ucfirst($oldStatus) . ' to ' . ucfirst($validated['status']));
+
+        } catch (\Exception $e) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to update status: ' . $e->getMessage()
+                ], 500);
+            }
+
+            return back()->withErrors(['error' => 'Failed to update status: ' . $e->getMessage()]);
         }
     }
 

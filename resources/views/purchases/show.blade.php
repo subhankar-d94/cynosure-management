@@ -2,21 +2,54 @@
 
 @section('content')
 <div class="container-fluid">
+    <!-- Success/Error Messages -->
+    @if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    @endif
+
+    @if(session('error') || $errors->any())
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-circle me-2"></i>
+        @if(session('error'))
+            {{ session('error') }}
+        @else
+            @foreach($errors->all() as $error)
+                {{ $error }}
+            @endforeach
+        @endif
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    @endif
+
     <!-- Header -->
     <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <div>
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
+            <div class="mb-2 mb-md-0">
                 <h3 class="mb-1">{{ $purchase->purchase_order_number }}</h3>
                 <small class="text-muted">Purchase Order Details</small>
             </div>
-            <div class="d-flex gap-2">
-                <span class="badge bg-{{
-                    $purchase->status === 'completed' ? 'success' :
-                    ($purchase->status === 'approved' ? 'info' :
-                    ($purchase->status === 'pending' ? 'warning' : 'secondary'))
-                }} fs-6">
-                    {{ ucfirst($purchase->status) }}
-                </span>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+                <!-- Status Update Form -->
+                <form action="{{ route('purchases.update-status', $purchase) }}" method="POST" class="d-inline" id="statusUpdateForm">
+                    @csrf
+                    <div class="d-flex gap-2 align-items-center">
+                        <label class="mb-0 text-muted small">Status:</label>
+                        <select name="status" class="form-select form-select-sm" style="width: 180px;">
+                            <option value="draft" {{ $purchase->status === 'draft' ? 'selected' : '' }}>Draft</option>
+                            <option value="pending" {{ $purchase->status === 'pending' ? 'selected' : '' }}>Pending Approval</option>
+                            <option value="approved" {{ $purchase->status === 'approved' ? 'selected' : '' }}>Approved</option>
+                            <option value="ordered" {{ $purchase->status === 'ordered' ? 'selected' : '' }}>Ordered</option>
+                            <option value="partial_received" {{ $purchase->status === 'partial_received' ? 'selected' : '' }}>Partially Received</option>
+                            <option value="received" {{ $purchase->status === 'received' ? 'selected' : '' }}>Received</option>
+                            <option value="completed" {{ $purchase->status === 'completed' ? 'selected' : '' }}>Completed</option>
+                            <option value="cancelled" {{ $purchase->status === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                        </select>
+                    </div>
+                </form>
+
                 <a href="{{ route('purchases.index') }}" class="btn btn-secondary">
                     <i class="fas fa-arrow-left"></i> Back to List
                 </a>
@@ -44,12 +77,8 @@
                         <tr>
                             <td class="text-muted"><strong>Status:</strong></td>
                             <td>
-                                <span class="badge bg-{{
-                                    $purchase->status === 'completed' ? 'success' :
-                                    ($purchase->status === 'approved' ? 'info' :
-                                    ($purchase->status === 'pending' ? 'warning' : 'secondary'))
-                                }}">
-                                    {{ ucfirst($purchase->status) }}
+                                <span class="badge bg-{{ $purchase->status_color }}">
+                                    {{ $purchase->status_label }}
                                 </span>
                             </td>
                         </tr>
@@ -225,5 +254,53 @@
 .badge {
     font-weight: 500;
 }
+
+#statusUpdateForm select {
+    cursor: pointer;
+    border: 2px solid #dee2e6;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+#statusUpdateForm select:hover {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15);
+}
+
+#statusUpdateForm select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
 </style>
+@endpush
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const statusSelect = document.querySelector('#statusUpdateForm select[name="status"]');
+    const originalStatus = statusSelect.value;
+
+    statusSelect.addEventListener('change', function(e) {
+        const newStatus = this.value;
+        const statusLabels = {
+            'draft': 'Draft',
+            'pending': 'Pending Approval',
+            'approved': 'Approved',
+            'ordered': 'Ordered',
+            'partial_received': 'Partially Received',
+            'received': 'Received',
+            'completed': 'Completed',
+            'cancelled': 'Cancelled'
+        };
+
+        if (confirm(`Are you sure you want to change the status from "${statusLabels[originalStatus]}" to "${statusLabels[newStatus]}"?`)) {
+            // Submit the form
+            this.form.submit();
+        } else {
+            // Revert the selection
+            this.value = originalStatus;
+        }
+    });
+});
+</script>
 @endpush

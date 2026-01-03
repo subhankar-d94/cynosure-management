@@ -247,6 +247,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/{purchase}', [PurchaseController::class, 'destroy'])->name('destroy');
 
         // Purchase management routes
+        Route::post('/{purchase}/update-status', [PurchaseController::class, 'updateStatus'])->name('update-status');
         Route::post('/{purchase}/approve', [PurchaseController::class, 'approve'])->name('approve');
         Route::post('/{purchase}/cancel', [PurchaseController::class, 'cancel'])->name('cancel');
         Route::post('/{purchase}/receive', [PurchaseController::class, 'receive'])->name('receive');
