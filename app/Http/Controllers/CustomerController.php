@@ -12,9 +12,55 @@ class CustomerController extends Controller
     /**
      * Display a listing of customers
      */
-    public function index()
+    public function index(Request $request)
     {
-        return view('customers.index');
+        $query = DB::table('customers')
+            ->select([
+                'customers.*',
+                DB::raw('(SELECT COUNT(*) FROM orders WHERE orders.customer_id = customers.id) as total_orders'),
+                DB::raw('(SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE orders.customer_id = customers.id) as total_spent'),
+                DB::raw('(SELECT MAX(created_at) FROM orders WHERE orders.customer_id = customers.id) as last_order_date')
+            ]);
+
+        // Search filter
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhere('customer_code', 'like', "%{$search}%");
+            });
+        }
+
+        // Status filter
+        if ($request->filled('status') && $request->status != '') {
+            $query->where('status', $request->status);
+        }
+
+        // Customer Type filter
+        if ($request->filled('customer_type') && $request->customer_type != '') {
+            $query->where('customer_type', $request->customer_type);
+        }
+
+        // Sorting
+        $sortBy = $request->input('sort_by', 'name');
+        $sortOrder = $request->input('sort_order', 'asc');
+        $query->orderBy($sortBy, $sortOrder);
+
+        // Get stats
+        $stats = [
+            'total_customers' => DB::table('customers')->count(),
+            'new_customers' => DB::table('customers')->where('created_at', '>=', now()->startOfMonth())->count(),
+            'active_orders' => DB::table('orders')->whereIn('status', ['pending', 'confirmed', 'processing'])->count(),
+            'total_revenue' => DB::table('orders')->sum('total_amount') ?? 0
+        ];
+
+        // Paginate results
+        $perPage = $request->input('per_page', 15);
+        $customers = $query->paginate($perPage)->appends($request->except('page'));
+
+        return view('customers.index', compact('customers', 'stats'));
     }
 
     /**
