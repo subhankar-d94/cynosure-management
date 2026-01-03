@@ -152,11 +152,11 @@
                                         <img src="{{ asset('storage/' . $product->images[0]) }}"
                                              alt="{{ $product->name }}"
                                              class="product-thumbnail"
-                                             onerror="this.src='/images/placeholder-product.png'">
+                                             onerror="this.parentElement.innerHTML='<div class=\'product-thumbnail-placeholder\'><i class=\'fas fa-box\'></i></div>'">
                                     @else
-                                        <img src="/images/placeholder-product.png"
-                                             alt="No image"
-                                             class="product-thumbnail">
+                                        <div class="product-thumbnail-placeholder">
+                                            <i class="fas fa-box"></i>
+                                        </div>
                                     @endif
                                 </div>
                             </td>
