@@ -266,7 +266,7 @@
                     Showing {{ $products->firstItem() }} to {{ $products->lastItem() }} of {{ $products->total() }} products
                 </div>
                 <div>
-                    {{ $products->links() }}
+                    {{ $products->links('pagination::bootstrap-5') }}
                 </div>
             </div>
         </div>
