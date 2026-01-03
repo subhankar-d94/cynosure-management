@@ -136,10 +136,10 @@
                         <tr>
                             <th width="90">Image</th>
                             <th>Product Name</th>
-                            <th width="140">Category</th>
+                            <th width="180">Category</th>
                             <th width="110">Price</th>
                             <th width="110">Stock</th>
-                            <th width="130" class="text-center">Actions</th>
+                            <th width="170" class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
