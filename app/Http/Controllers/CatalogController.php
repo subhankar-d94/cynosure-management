@@ -36,11 +36,9 @@ class CatalogController extends Controller
             })
             ->firstOrFail();
 
-        // Get products for this category
+        // Get products for this category (including all products)
         $productsQuery = Product::where('category_id', $category->id)
-            ->whereNotNull('images')
-            ->where('images', '!=', '[]')
-            ->with('category');
+            ->with(['category', 'inventory']);
 
         // Apply filters
         if ($request->has('search') && $request->search) {
@@ -74,10 +72,7 @@ class CatalogController extends Controller
 
         // Get all categories for navigation
         $allCategories = Category::where('is_active', true)
-            ->withCount(['products' => function ($query) {
-                $query->whereNotNull('images')
-                      ->where('images', '!=', '[]');
-            }])
+            ->withCount('products')
             ->having('products_count', '>', 0)
             ->orderBy('name')
             ->get();
@@ -87,16 +82,13 @@ class CatalogController extends Controller
 
     public function product($categorySlug, $productId)
     {
-        $product = Product::with('category')
-            ->whereNotNull('images')
-            ->where('images', '!=', '[]')
+        $product = Product::with(['category', 'inventory'])
             ->findOrFail($productId);
 
-        // Get related products from same category
+        // Get related products from same category (including all products)
         $relatedProducts = Product::where('category_id', $product->category_id)
             ->where('id', '!=', $product->id)
-            ->whereNotNull('images')
-            ->where('images', '!=', '[]')
+            ->with('inventory')
             ->limit(4)
             ->get();
 
@@ -111,23 +103,19 @@ class CatalogController extends Controller
             return redirect()->route('catalog.index');
         }
 
-        $products = Product::whereNotNull('images')
-            ->where('images', '!=', '[]')
-            ->where(function($q) use ($query) {
+        // Search all products (including those without images)
+        $products = Product::where(function($q) use ($query) {
                 $q->where('name', 'LIKE', "%{$query}%")
                   ->orWhere('description', 'LIKE', "%{$query}%")
                   ->orWhere('sku', 'LIKE', "%{$query}%");
             })
-            ->with('category')
+            ->with(['category', 'inventory'])
             ->orderBy('name')
             ->paginate(12);
 
         // Get all categories for navigation
         $allCategories = Category::where('is_active', true)
-            ->withCount(['products' => function ($query) {
-                $query->whereNotNull('images')
-                      ->where('images', '!=', '[]');
-            }])
+            ->withCount('products')
             ->having('products_count', '>', 0)
             ->orderBy('name')
             ->get();

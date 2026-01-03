@@ -434,9 +434,7 @@
 
             @php
                 $navCategories = \App\Models\Category::where('is_active', true)
-                    ->withCount(['products' => function ($query) {
-                        $query->whereNotNull('images')->where('images', '!=', '[]');
-                    }])
+                    ->withCount('products')
                     ->having('products_count', '>', 0)
                     ->orderBy('name')
                     ->get();
