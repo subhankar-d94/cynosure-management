@@ -18,21 +18,8 @@ class ProductController extends Controller
     {
         $query = Product::with(['category', 'inventory']);
 
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->input('category_id'));
-        }
-
-        if ($request->has('customizable_only')) {
-            $query->customizable();
-        }
-
-        if ($request->has('in_stock_only')) {
-            $query->whereHas('inventory', function ($q) {
-                $q->where('quantity_in_stock', '>', 0);
-            });
-        }
-
-        if ($request->has('search')) {
+        // Search filter
+        if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
@@ -41,24 +28,56 @@ class ProductController extends Controller
             });
         }
 
-        if ($request->has('sort_by')) {
-            $sortBy = $request->input('sort_by', 'name');
-            $sortOrder = $request->input('sort_order', 'asc');
+        // Category filter
+        if ($request->filled('category_id') && $request->category_id != '') {
+            $query->where('category_id', $request->category_id);
+        }
+
+        // Stock status filter
+        if ($request->filled('stock_filter') && $request->stock_filter != '') {
+            switch ($request->stock_filter) {
+                case 'in_stock':
+                    $query->whereHas('inventory', function ($q) {
+                        $q->whereColumn('quantity_in_stock', '>', 'reorder_level');
+                    });
+                    break;
+                case 'low_stock':
+                    $query->whereHas('inventory', function ($q) {
+                        $q->whereColumn('quantity_in_stock', '<=', 'reorder_level')
+                          ->where('quantity_in_stock', '>', 0);
+                    });
+                    break;
+                case 'out_of_stock':
+                    $query->whereHas('inventory', function ($q) {
+                        $q->where('quantity_in_stock', '=', 0);
+                    });
+                    break;
+            }
+        }
+
+        // Customizable filter
+        if ($request->filled('customizable_filter') && $request->customizable_filter != '') {
+            $query->where('is_customizable', $request->customizable_filter);
+        }
+
+        // Sorting
+        $sortBy = $request->input('sort_by', 'created_at');
+        $sortOrder = $request->input('sort_order', 'desc');
+
+        if ($sortBy === 'stock') {
+            $query->leftJoin('inventories', 'products.id', '=', 'inventories.product_id')
+                  ->orderBy('inventories.quantity_in_stock', $sortOrder)
+                  ->select('products.*');
+        } else {
             $query->orderBy($sortBy, $sortOrder);
         }
 
-        $products = $request->has('paginate')
-            ? $query->paginate($request->input('per_page', 15))
-            : $query->get();
+        // Paginate results
+        $perPage = $request->input('per_page', 15);
+        $products = $query->paginate($perPage)->appends($request->except('page'));
 
-        if ($request->expectsJson()) {
-            return response()->json([
-                'success' => true,
-                'data' => $products
-            ]);
-        }
+        $categories = Category::active()->orderBy('name')->get();
 
-        $categories = Category::active()->get();
         return view('products.index', compact('products', 'categories'));
     }
 
