@@ -180,7 +180,6 @@
                                     </th>
                                     <th>Customer</th>
                                     <th>Contact</th>
-                                    <th>Type</th>
                                     <th>Total Orders</th>
                                     <th>Total Spent</th>
                                     <th>Last Order</th>
@@ -361,11 +360,10 @@ function renderCustomersTable(customers) {
     let html = '';
 
     if (customers.length === 0) {
-        html = '<tr><td colspan="9" class="text-center py-4">No customers found</td></tr>';
+        html = '<tr><td colspan="7" class="text-center py-4">No customers found</td></tr>';
     } else {
         customers.forEach(function(customer) {
             const statusBadge = customer.status === 'active' ? 'bg-success' : 'bg-secondary';
-            const typeBadge = customer.customer_type === 'business' ? 'bg-primary' : 'bg-info';
 
             html += `
                 <tr>
@@ -385,12 +383,8 @@ function renderCustomersTable(customers) {
                     </td>
                     <td>
                         <div>
-                            <small class="d-block">${customer.email || 'No email'}</small>
                             <small class="text-muted">${customer.phone || 'No phone'}</small>
                         </div>
-                    </td>
-                    <td>
-                        <span class="badge ${typeBadge}">${customer.customer_type === 'business' ? 'Business' : 'Individual'}</span>
                     </td>
                     <td>
                         <span class="fw-bold">${customer.total_orders || 0}</span>
