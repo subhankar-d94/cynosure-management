@@ -10,21 +10,15 @@ class CatalogController extends Controller
 {
     public function index(Request $request)
     {
-        // Get all active categories with product counts
+        // Get all active categories with product counts (including all products)
         $categories = Category::where('is_active', true)
-            ->withCount(['products' => function ($query) {
-                // Only count products that have images (ready for catalog)
-                $query->whereNotNull('images')
-                      ->where('images', '!=', '[]');
-            }])
+            ->withCount('products')
             ->having('products_count', '>', 0)
             ->orderBy('name')
             ->get();
 
-        // Get featured/recent products for homepage
-        $featuredProducts = Product::whereNotNull('images')
-            ->where('images', '!=', '[]')
-            ->with('category')
+        // Get featured/recent products for homepage (including all products)
+        $featuredProducts = Product::with('category')
             ->orderBy('created_at', 'desc')
             ->limit(8)
             ->get();
