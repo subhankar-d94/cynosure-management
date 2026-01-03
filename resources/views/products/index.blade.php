@@ -438,6 +438,26 @@ body {
     border-color: #667eea;
 }
 
+.product-thumbnail-placeholder {
+    width: 70px;
+    height: 70px;
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    border-radius: 10px;
+    border: 2px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    font-size: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.product-thumbnail-placeholder:hover {
+    background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+    color: #6b7280;
+    border-color: #d1d5db;
+}
+
 /* Product Info */
 .product-name {
     font-size: 0.95rem;
