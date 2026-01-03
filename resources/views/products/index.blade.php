@@ -164,7 +164,10 @@
                             <!-- Product Name -->
                             <td>
                                 <div class="product-info">
-                                    <h6 class="product-name mb-0">{{ $product->name }}</h6>
+                                    <h6 class="product-name mb-1">{{ $product->name }}</h6>
+                                    @if($product->description)
+                                        <p class="product-description mb-0">{{ Str::limit($product->description, 80) }}</p>
+                                    @endif
                                 </div>
                             </td>
 
@@ -440,6 +443,12 @@ body {
     font-size: 0.95rem;
     font-weight: 600;
     color: #111827;
+}
+
+.product-description {
+    font-size: 0.8rem;
+    color: #6b7280;
+    line-height: 1.4;
 }
 
 /* Category Badge */
