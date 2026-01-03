@@ -371,15 +371,7 @@ function renderCustomersTable(customers) {
                         <input type="checkbox" class="form-check-input customer-checkbox" value="${customer.id}">
                     </td>
                     <td>
-                        <div class="d-flex align-items-center">
-                            <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
-                                ${customer.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                                <h6 class="mb-0">${customer.name}</h6>
-                                <small class="text-muted">${customer.customer_code || 'N/A'}</small>
-                            </div>
-                        </div>
+                        <h6 class="mb-0">${customer.name}</h6>
                     </td>
                     <td>
                         <div>
