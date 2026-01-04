@@ -38,6 +38,12 @@
     <form id="customerEditForm" method="POST" action="{{ route('customers.update', $customer->id ?? 1) }}">
         @csrf
         @method('PUT')
+        <!-- Hidden fields for required backend fields -->
+        <input type="hidden" name="customer_type" value="{{ old('customer_type', $customer->customer_type ?? 'individual') }}">
+        <input type="hidden" name="customer_code" value="{{ old('customer_code', $customer->customer_code ?? '') }}">
+        <input type="hidden" name="credit_limit" value="{{ old('credit_limit', $customer->credit_limit ?? 0) }}">
+        <input type="hidden" name="payment_terms" value="{{ old('payment_terms', $customer->payment_terms ?? 30) }}">
+        <input type="hidden" name="discount_percentage" value="{{ old('discount_percentage', $customer->discount_percentage ?? 0) }}">
 
         <div class="row">
             <!-- Main Information -->
@@ -49,21 +55,6 @@
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Customer Type <span class="text-danger">*</span></label>
-                                <select class="form-select" name="customer_type" id="customer_type" required>
-                                    <option value="">Select Type</option>
-                                    <option value="individual" {{ (old('customer_type', $customer->customer_type ?? '') === 'individual') ? 'selected' : '' }}>Individual</option>
-                                    <option value="business" {{ (old('customer_type', $customer->customer_type ?? '') === 'business') ? 'selected' : '' }}>Business</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Customer Code</label>
-                                <input type="text" class="form-control" name="customer_code" id="customer_code"
-                                       value="{{ old('customer_code', $customer->customer_code ?? '') }}"
-                                       placeholder="Customer code">
-                                <small class="text-muted">Unique identifier for this customer</small>
-                            </div>
                             <div class="col-md-12">
                                 <label class="form-label">Full Name <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" name="name"
@@ -81,18 +72,6 @@
                                 <input type="tel" class="form-control" name="phone"
                                        value="{{ old('phone', $customer->phone ?? '') }}"
                                        placeholder="+91 9876543210">
-                            </div>
-                            <div class="col-md-6" id="businessFields" style="display: none;">
-                                <label class="form-label">Company Name</label>
-                                <input type="text" class="form-control" name="company_name"
-                                       value="{{ old('company_name', $customer->company_name ?? '') }}"
-                                       placeholder="Company name">
-                            </div>
-                            <div class="col-md-6" id="gstField" style="display: none;">
-                                <label class="form-label">GST Number</label>
-                                <input type="text" class="form-control" name="gst_number"
-                                       value="{{ old('gst_number', $customer->gst_number ?? '') }}"
-                                       placeholder="GST registration number">
                             </div>
                             <div class="col-md-12">
                                 <label class="form-label">Notes</label>
@@ -147,71 +126,6 @@
                             <select class="form-select" name="status">
                                 <option value="active" {{ (old('status', $customer->status ?? 'active') === 'active') ? 'selected' : '' }}>Active</option>
                                 <option value="inactive" {{ (old('status', $customer->status ?? 'active') === 'inactive') ? 'selected' : '' }}>Inactive</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Credit Limit</label>
-                            <div class="input-group">
-                                <span class="input-group-text">₹</span>
-                                <input type="number" class="form-control" name="credit_limit"
-                                       value="{{ old('credit_limit', $customer->credit_limit ?? 0) }}"
-                                       step="0.01" min="0" placeholder="0.00">
-                            </div>
-                            <small class="text-muted">Maximum credit allowed</small>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Payment Terms (Days)</label>
-                            <input type="number" class="form-control" name="payment_terms"
-                                   value="{{ old('payment_terms', $customer->payment_terms ?? 30) }}"
-                                   min="0" placeholder="30">
-                            <small class="text-muted">Payment due days</small>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Discount Percentage</label>
-                            <div class="input-group">
-                                <input type="number" class="form-control" name="discount_percentage"
-                                       value="{{ old('discount_percentage', $customer->discount_percentage ?? 0) }}"
-                                       step="0.01" min="0" max="100" placeholder="0.00">
-                                <span class="input-group-text">%</span>
-                            </div>
-                            <small class="text-muted">Default discount for this customer</small>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Customer Preferences -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Preferences</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="email_notifications" value="1"
-                                       {{ old('email_notifications', $customer->email_notifications ?? false) ? 'checked' : '' }}>
-                                <label class="form-check-label">Email Notifications</label>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="sms_notifications" value="1"
-                                       {{ old('sms_notifications', $customer->sms_notifications ?? false) ? 'checked' : '' }}>
-                                <label class="form-check-label">SMS Notifications</label>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="marketing_emails" value="1"
-                                       {{ old('marketing_emails', $customer->marketing_emails ?? false) ? 'checked' : '' }}>
-                                <label class="form-check-label">Marketing Emails</label>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Preferred Contact Method</label>
-                            <select class="form-select" name="preferred_contact_method">
-                                <option value="email" {{ (old('preferred_contact_method', $customer->preferred_contact_method ?? 'email') === 'email') ? 'selected' : '' }}>Email</option>
-                                <option value="phone" {{ (old('preferred_contact_method', $customer->preferred_contact_method ?? 'email') === 'phone') ? 'selected' : '' }}>Phone</option>
-                                <option value="sms" {{ (old('preferred_contact_method', $customer->preferred_contact_method ?? 'email') === 'sms') ? 'selected' : '' }}>SMS</option>
                             </select>
                         </div>
                     </div>
@@ -363,18 +277,12 @@
 let currentCustomerId = {{ $customer->id ?? 'null' }};
 
 $(document).ready(function() {
-    // Initialize customer type fields
-    toggleCustomerTypeFields();
-
     // Load data if editing existing customer
     if (currentCustomerId) {
         loadCustomerStats();
         loadAddresses();
         loadActivityLog();
     }
-
-    // Customer type change handler
-    $('#customer_type').on('change', toggleCustomerTypeFields);
 
     // Form submission
     $('#customerEditForm').on('submit', function(e) {
@@ -393,15 +301,6 @@ $(document).ready(function() {
         confirmDelete();
     });
 });
-
-function toggleCustomerTypeFields() {
-    const customerType = $('#customer_type').val();
-    if (customerType === 'business') {
-        $('#businessFields, #gstField').show();
-    } else {
-        $('#businessFields, #gstField').hide();
-    }
-}
 
 function loadCustomerStats() {
     $.get(`/customers/${currentCustomerId}?include_stats=1`)

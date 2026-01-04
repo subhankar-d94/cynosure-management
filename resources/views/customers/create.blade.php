@@ -33,6 +33,12 @@
 
     <form id="customerForm" method="POST" action="{{ route('customers.store') }}">
         @csrf
+        <!-- Hidden fields for required backend fields -->
+        <input type="hidden" name="customer_type" value="individual">
+        <input type="hidden" name="customer_code" value="">
+        <input type="hidden" name="credit_limit" value="0">
+        <input type="hidden" name="payment_terms" value="30">
+        <input type="hidden" name="discount_percentage" value="0">
         <div class="row">
             <!-- Main Information -->
             <div class="col-lg-8">
@@ -42,19 +48,6 @@
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Customer Type <span class="text-danger">*</span></label>
-                                <select class="form-select" name="customer_type" id="customer_type" required>
-                                    <option value="">Select Type</option>
-                                    <option value="individual">Individual</option>
-                                    <option value="business">Business</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Customer Code</label>
-                                <input type="text" class="form-control" name="customer_code" id="customer_code" placeholder="Auto-generated if empty">
-                                <small class="text-muted">Leave empty for auto-generation</small>
-                            </div>
                             <div class="col-md-12">
                                 <label class="form-label">Full Name <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" name="name" required placeholder="Enter full name">
@@ -66,14 +59,6 @@
                             <div class="col-md-6">
                                 <label class="form-label">Phone Number</label>
                                 <input type="tel" class="form-control" name="phone" placeholder="+91 9876543210">
-                            </div>
-                            <div class="col-md-6" id="businessFields" style="display: none;">
-                                <label class="form-label">Company Name</label>
-                                <input type="text" class="form-control" name="company_name" placeholder="Company name">
-                            </div>
-                            <div class="col-md-6" id="gstField" style="display: none;">
-                                <label class="form-label">GST Number</label>
-                                <input type="text" class="form-control" name="gst_number" placeholder="GST registration number">
                             </div>
                             <div class="col-md-12">
                                 <label class="form-label">Notes</label>
@@ -156,62 +141,6 @@
                             <select class="form-select" name="status">
                                 <option value="active" selected>Active</option>
                                 <option value="inactive">Inactive</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Credit Limit</label>
-                            <div class="input-group">
-                                <span class="input-group-text">₹</span>
-                                <input type="number" class="form-control" name="credit_limit" step="0.01" min="0" placeholder="0.00">
-                            </div>
-                            <small class="text-muted">Maximum credit allowed</small>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Payment Terms (Days)</label>
-                            <input type="number" class="form-control" name="payment_terms" min="0" placeholder="30">
-                            <small class="text-muted">Payment due days</small>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Discount Percentage</label>
-                            <div class="input-group">
-                                <input type="number" class="form-control" name="discount_percentage" step="0.01" min="0" max="100" placeholder="0.00">
-                                <span class="input-group-text">%</span>
-                            </div>
-                            <small class="text-muted">Default discount for this customer</small>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Customer Preferences -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Preferences</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="email_notifications" value="1" checked>
-                                <label class="form-check-label">Email Notifications</label>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="sms_notifications" value="1">
-                                <label class="form-check-label">SMS Notifications</label>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="marketing_emails" value="1">
-                                <label class="form-check-label">Marketing Emails</label>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Preferred Contact Method</label>
-                            <select class="form-select" name="preferred_contact_method">
-                                <option value="email">Email</option>
-                                <option value="phone">Phone</option>
-                                <option value="sms">SMS</option>
                             </select>
                         </div>
                     </div>
@@ -348,24 +277,11 @@ let addressIndex = 1;
 let autocompleteInstances = {};
 
 $(document).ready(function() {
-    // Customer type change handler
-    $('#customer_type').on('change', function() {
-        const customerType = $(this).val();
-        if (customerType === 'business') {
-            $('#businessFields, #gstField').show();
-        } else {
-            $('#businessFields, #gstField').hide();
-        }
-    });
-
     // Form submission
     $('#customerForm').on('submit', function(e) {
         e.preventDefault();
         submitForm();
     });
-
-    // Auto-generate customer code
-    generateCustomerCode();
 
     // Initialize Google Places autocomplete when Google Maps API is loaded
     if (typeof google !== 'undefined' && google.maps && google.maps.places) {
@@ -511,13 +427,6 @@ function fillAddressFields(index, addressComponents, formattedAddress) {
     showAlert('Address auto-filled successfully!', 'success');
 }
 
-function generateCustomerCode() {
-    const prefix = 'CUST';
-    const timestamp = Date.now().toString().slice(-6);
-    const random = Math.floor(Math.random() * 100).toString().padStart(2, '0');
-    $('#customer_code').attr('placeholder', `${prefix}${timestamp}${random}`);
-}
-
 function addAddress() {
     const template = document.getElementById('addressTemplate').innerHTML;
     const addressHtml = template.replace(/__INDEX__/g, addressIndex).replace(/__NUM__/g, addressIndex + 1);
@@ -547,30 +456,6 @@ function removeAddress(button) {
 
 function submitForm() {
     const formData = new FormData($('#customerForm')[0]);
-
-    // Handle empty numeric fields - set defaults
-    if (!formData.get('credit_limit') || formData.get('credit_limit') === '') {
-        formData.set('credit_limit', '0');
-    }
-    if (!formData.get('payment_terms') || formData.get('payment_terms') === '') {
-        formData.set('payment_terms', '30');
-    }
-    if (!formData.get('discount_percentage') || formData.get('discount_percentage') === '') {
-        formData.set('discount_percentage', '0');
-    }
-
-    // Handle checkboxes properly
-    formData.set('email_notifications', $('input[name="email_notifications"]').is(':checked') ? '1' : '0');
-    formData.set('sms_notifications', $('input[name="sms_notifications"]').is(':checked') ? '1' : '0');
-    formData.set('marketing_emails', $('input[name="marketing_emails"]').is(':checked') ? '1' : '0');
-
-    // Generate customer code if empty
-    if (!formData.get('customer_code') || formData.get('customer_code') === '') {
-        const prefix = 'CUST';
-        const timestamp = Date.now().toString().slice(-6);
-        const random = Math.floor(Math.random() * 100).toString().padStart(2, '0');
-        formData.set('customer_code', `${prefix}${timestamp}${random}`);
-    }
 
     // Show loading state
     const submitBtn = $('button[type="submit"]');

@@ -25,10 +25,9 @@
                     <div>
                         <h2 class="mb-1">{{ $customer->name }}</h2>
                         <div class="d-flex align-items-center">
-                            <span class="badge {{ $customer->status === 'active' ? 'bg-success' : 'bg-secondary' }} me-2">
+                            <span class="badge {{ $customer->status === 'active' ? 'bg-success' : 'bg-secondary' }}">
                                 {{ ucfirst($customer->status) }}
                             </span>
-                            <span class="text-muted">{{ $customer->customer_code }}</span>
                         </div>
                     </div>
                 </div>
@@ -136,18 +135,6 @@
                             <h6 class="text-muted">Phone Number</h6>
                             <p class="mb-3">{{ $customer->phone ?? 'Not provided' }}</p>
                         </div>
-                        <div class="col-md-6">
-                            <h6 class="text-muted">Customer Type</h6>
-                            <p class="mb-3">
-                                <span class="badge bg-secondary">{{ ucfirst($customer->customer_type ?? 'individual') }}</span>
-                            </p>
-                        </div>
-                        @if($customer->customer_type === 'business' && $customer->company_name)
-                        <div class="col-md-6">
-                            <h6 class="text-muted">Company</h6>
-                            <p class="mb-3">{{ $customer->company_name }}</p>
-                        </div>
-                        @endif
                         @if($customer->notes)
                         <div class="col-md-12">
                             <h6 class="text-muted">Notes</h6>
@@ -302,55 +289,6 @@
                         <button class="btn btn-outline-warning" onclick="exportCustomerData()">
                             <i class="bi bi-download me-1"></i>Export Data
                         </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Customer Settings -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Settings</h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <h6 class="text-muted">Credit Limit</h6>
-                        <p class="mb-0">₹{{ number_format($customer->credit_limit ?? 0, 2) }}</p>
-                    </div>
-                    <div class="mb-3">
-                        <h6 class="text-muted">Payment Terms</h6>
-                        <p class="mb-0">{{ $customer->payment_terms ?? 30 }} days</p>
-                    </div>
-                    <div class="mb-3">
-                        <h6 class="text-muted">Discount</h6>
-                        <p class="mb-0">{{ $customer->discount_percentage ?? 0 }}%</p>
-                    </div>
-                    <div class="mb-3">
-                        <h6 class="text-muted">Preferred Contact</h6>
-                        <p class="mb-0">{{ ucfirst($customer->preferred_contact_method ?? 'email') }}</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Notifications -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Notification Preferences</h5>
-                </div>
-                <div class="card-body">
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox"
-                               {{ $customer->email_notifications ? 'checked' : '' }} disabled>
-                        <label class="form-check-label">Email Notifications</label>
-                    </div>
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox"
-                               {{ $customer->sms_notifications ? 'checked' : '' }} disabled>
-                        <label class="form-check-label">SMS Notifications</label>
-                    </div>
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox"
-                               {{ $customer->marketing_emails ? 'checked' : '' }} disabled>
-                        <label class="form-check-label">Marketing Emails</label>
                     </div>
                 </div>
             </div>

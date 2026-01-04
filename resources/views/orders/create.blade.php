@@ -60,48 +60,54 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="customer_type" class="form-label">Customer Type</label>
-                                    <select class="form-select" id="customer_type" name="customer_type">
+                                    <label for="customer_type" class="form-label">Customer Type *</label>
+                                    <select class="form-select" id="customer_type" name="customer_type" required>
                                         <option value="existing">Existing Customer</option>
-                                        <option value="walk-in">Walk-in Customer</option>
                                         <option value="new">New Customer</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="col-md-6" id="customer_select_wrapper">
                                 <div class="mb-3">
-                                    <label for="customer_id" class="form-label">Select Customer</label>
-                                    <select class="form-select" id="customer_id" name="customer_id">
+                                    <label for="customer_search" class="form-label">Search Customer</label>
+                                    <input type="text" class="form-control mb-2" id="customer_search" placeholder="Search by name or phone...">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="customer_id" class="form-label">Select Customer *</label>
+                                    <select class="form-select" id="customer_id" name="customer_id" size="5" required>
                                         <option value="">Choose a customer...</option>
                                     </select>
                                 </div>
                             </div>
 
-                            <!-- Customer Details (for walk-in/new customers) -->
+                            <!-- Customer Details (for new customers) -->
                             <div id="customer_details" class="col-12 d-none">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i> Please provide customer details below. The customer will be created automatically when saving the order.
+                                </div>
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label for="customer_name" class="form-label">Customer Name *</label>
-                                            <input type="text" class="form-control" id="customer_name" name="customer_name">
+                                            <input type="text" class="form-control" id="customer_name" name="customer_name" placeholder="Enter customer name">
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label for="customer_phone" class="form-label">Phone Number *</label>
-                                            <input type="tel" class="form-control" id="customer_phone" name="customer_phone">
+                                            <input type="tel" class="form-control" id="customer_phone" name="customer_phone" placeholder="+91 9876543210">
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <label for="customer_email" class="form-label">Email</label>
-                                            <input type="email" class="form-control" id="customer_email" name="customer_email">
+                                            <label for="customer_email" class="form-label">Email (Optional)</label>
+                                            <input type="email" class="form-control" id="customer_email" name="customer_email" placeholder="customer@example.com">
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <label for="customer_address" class="form-label">Address</label>
-                                            <textarea class="form-control" id="customer_address" name="customer_address" rows="2"></textarea>
+                                            <label for="customer_address" class="form-label">Address (Optional)</label>
+                                            <textarea class="form-control" id="customer_address" name="customer_address" rows="2" placeholder="Enter customer address"></textarea>
                                         </div>
                                     </div>
                                 </div>
@@ -293,6 +299,36 @@
 </div>
 @endsection
 
+@push('styles')
+<style>
+/* Customer select box styling */
+#customer_id {
+    min-height: 150px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+#customer_id option {
+    padding: 8px;
+    cursor: pointer;
+}
+
+#customer_id option:hover {
+    background-color: #f0f0f0;
+}
+
+#customer_search {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+}
+
+#customer_search:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+</style>
+@endpush
+
 @push('scripts')
 <script>
 $(document).ready(function() {
@@ -304,13 +340,24 @@ $(document).ready(function() {
         if (type === 'existing') {
             $('#customer_select_wrapper').removeClass('d-none');
             $('#customer_details').addClass('d-none');
+            $('#customer_search').val(''); // Clear search
+            $('#customer_id').prop('required', true); // Make customer_id required
+            // Remove required from new customer fields and clear them
+            $('#customer_name, #customer_phone').prop('required', false).val('');
+            $('#customer_email, #customer_address').val('');
             loadCustomers();
         } else {
             $('#customer_select_wrapper').addClass('d-none');
             $('#customer_details').removeClass('d-none');
-            $('#customer_id').val('');
+            $('#customer_id').val('').prop('required', false); // Not required for new customer
+            $('#customer_search').val(''); // Clear search
+            // Make new customer fields required
+            $('#customer_name, #customer_phone').prop('required', true);
         }
     });
+
+    // Trigger initial state
+    $('#customer_type').trigger('change');
 
     // Load customers for selection
     function loadCustomers() {
@@ -319,10 +366,26 @@ $(document).ready(function() {
             const select = $('#customer_id');
             select.empty().append('<option value="">Choose a customer...</option>');
             customers.forEach(function(customer) {
-                select.append(`<option value="${customer.id}">${customer.name} - ${customer.phone}</option>`);
+                select.append(`<option value="${customer.id}" data-name="${customer.name}" data-phone="${customer.phone || ''}">${customer.name} - ${customer.phone || 'No phone'}</option>`);
             });
         });
     }
+
+    // Customer search functionality
+    $('#customer_search').on('input', function() {
+        const searchTerm = $(this).val().toLowerCase();
+        $('#customer_id option').each(function() {
+            const name = $(this).data('name') ? $(this).data('name').toLowerCase() : '';
+            const phone = $(this).data('phone') ? $(this).data('phone').toLowerCase() : '';
+            const text = $(this).text().toLowerCase();
+
+            if (name.includes(searchTerm) || phone.includes(searchTerm) || text.includes(searchTerm)) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    });
 
     // Add item button
     $('#addItemBtn').click(function() {
@@ -544,21 +607,40 @@ $(document).ready(function() {
 
     // Form validation
     $('#orderForm').on('submit', function(e) {
+        // Check if at least one item is added
         if ($('#itemsTableBody tr').length === 0) {
             e.preventDefault();
             alert('Please add at least one item to the order.');
             return false;
         }
 
-        if ($('#customer_type').val() !== 'existing' && !$('#customer_name').val()) {
-            e.preventDefault();
-            alert('Please enter customer name.');
-            return false;
+        const customerType = $('#customer_type').val();
+
+        // Validate customer selection based on type
+        if (customerType === 'existing') {
+            if (!$('#customer_id').val()) {
+                e.preventDefault();
+                alert('Please select an existing customer.');
+                return false;
+            }
+            // Remove customer detail fields when existing customer is selected
+            $('#customer_name, #customer_phone, #customer_email, #customer_address').prop('disabled', true);
+        } else {
+            // For new customers
+            if (!$('#customer_name').val()) {
+                e.preventDefault();
+                alert('Please enter customer name.');
+                return false;
+            }
+            if (!$('#customer_phone').val()) {
+                e.preventDefault();
+                alert('Please enter customer phone number.');
+                return false;
+            }
+            // Remove customer_id field when new customer is selected
+            $('#customer_id').prop('disabled', true);
         }
     });
-
-    // Initialize
-    loadCustomers();
 });
 </script>
 @endpush

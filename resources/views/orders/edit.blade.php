@@ -77,56 +77,20 @@
                             <div class="col-12">
                                 <h5 class="border-bottom pb-2 mb-3">Customer Information</h5>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-6" id="customer_select_wrapper">
                                 <div class="mb-3">
-                                    <label for="customer_type" class="form-label">Customer Type</label>
-                                    <select class="form-select" id="customer_type" name="customer_type">
-                                        <option value="existing" {{ isset($order->customer_id) ? 'selected' : '' }}>Existing Customer</option>
-                                        <option value="walk-in" {{ !isset($order->customer_id) ? 'selected' : '' }}>Walk-in Customer</option>
+                                    <label for="customer_search" class="form-label">Search Customer</label>
+                                    <input type="text" class="form-control mb-2" id="customer_search" placeholder="Search by name or phone...">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="customer_id" class="form-label">Select Customer *</label>
+                                    <select class="form-select" id="customer_id" name="customer_id" size="5" required>
+                                        <option value="">Loading customers...</option>
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-6" id="customer_select_wrapper" style="{{ isset($order->customer_id) ? '' : 'display: none;' }}">
-                                <div class="mb-3">
-                                    <label for="customer_id" class="form-label">Select Customer</label>
-                                    <select class="form-select" id="customer_id" name="customer_id">
-                                        <option value="">Choose a customer...</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- Customer Details (for walk-in customers) -->
-                            <div id="customer_details" class="col-12" style="{{ !isset($order->customer_id) ? '' : 'display: none;' }}">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="customer_name" class="form-label">Customer Name *</label>
-                                            <input type="text" class="form-control" id="customer_name" name="customer_name"
-                                                   value="{{ $order->customer_name ?? '' }}">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="customer_phone" class="form-label">Phone Number *</label>
-                                            <input type="tel" class="form-control" id="customer_phone" name="customer_phone"
-                                                   value="{{ $order->customer_phone ?? '' }}">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="customer_email" class="form-label">Email</label>
-                                            <input type="email" class="form-control" id="customer_email" name="customer_email"
-                                                   value="{{ $order->customer_email ?? '' }}">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="customer_address" class="form-label">Address</label>
-                                            <textarea class="form-control" id="customer_address" name="customer_address" rows="2">{{ $order->customer_address ?? '' }}</textarea>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <!-- Hidden field for customer type - always existing when editing -->
+                            <input type="hidden" name="customer_type" value="existing">
                         </div>
 
                         <!-- Order Items Section -->
@@ -376,25 +340,41 @@
 </div>
 @endsection
 
+@push('styles')
+<style>
+/* Customer select box styling */
+#customer_id {
+    min-height: 150px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+#customer_id option {
+    padding: 8px;
+    cursor: pointer;
+}
+
+#customer_id option:hover {
+    background-color: #f0f0f0;
+}
+
+#customer_search {
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+}
+
+#customer_search:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+</style>
+@endpush
+
 @push('scripts')
 <script>
 $(document).ready(function() {
     let itemCounter = {{ isset($order->items) ? $order->items->count() : 1 }};
     // No tax rate as per user requirement
-
-    // Customer type change handler
-    $('#customer_type').change(function() {
-        const type = $(this).val();
-        if (type === 'existing') {
-            $('#customer_select_wrapper').show();
-            $('#customer_details').hide();
-            loadCustomers();
-        } else {
-            $('#customer_select_wrapper').hide();
-            $('#customer_details').show();
-            $('#customer_id').val('');
-        }
-    });
 
     // Load customers for selection
     function loadCustomers() {
@@ -404,10 +384,26 @@ $(document).ready(function() {
             select.empty().append('<option value="">Choose a customer...</option>');
             customers.forEach(function(customer) {
                 const selected = customer.id == {{ $order->customer_id ?? 'null' }} ? 'selected' : '';
-                select.append(`<option value="${customer.id}" ${selected}>${customer.name} - ${customer.phone}</option>`);
+                select.append(`<option value="${customer.id}" data-name="${customer.name}" data-phone="${customer.phone || ''}" ${selected}>${customer.name} - ${customer.phone || 'No phone'}</option>`);
             });
         });
     }
+
+    // Customer search functionality
+    $('#customer_search').on('input', function() {
+        const searchTerm = $(this).val().toLowerCase();
+        $('#customer_id option').each(function() {
+            const name = $(this).data('name') ? $(this).data('name').toLowerCase() : '';
+            const phone = $(this).data('phone') ? $(this).data('phone').toLowerCase() : '';
+            const text = $(this).text().toLowerCase();
+
+            if (name.includes(searchTerm) || phone.includes(searchTerm) || text.includes(searchTerm)) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    });
 
     // Add item button
     $('#addItemBtn').click(function() {
@@ -555,20 +551,7 @@ $(document).ready(function() {
                 </div>
                 <div class="col-md-6">
                     <h6>Customer Information</h6>
-        `;
-
-        if ($('#customer_type').val() === 'existing') {
-            const customerText = $('#customer_id option:selected').text();
-            previewHtml += `<p><strong>Customer:</strong> ${customerText}</p>`;
-        } else {
-            previewHtml += `
-                <p><strong>Name:</strong> ${$('#customer_name').val()}</p>
-                <p><strong>Phone:</strong> ${$('#customer_phone').val()}</p>
-                <p><strong>Email:</strong> ${$('#customer_email').val()}</p>
-            `;
-        }
-
-        previewHtml += `
+                    <p><strong>Customer:</strong> ${$('#customer_id option:selected').text()}</p>
                 </div>
             </div>
             <hr>
@@ -627,23 +610,23 @@ $(document).ready(function() {
 
     // Form validation
     $('#orderEditForm').on('submit', function(e) {
+        // Check if at least one item is added
         if ($('#itemsTableBody tr').length === 0) {
             e.preventDefault();
             alert('Please add at least one item to the order.');
             return false;
         }
 
-        if ($('#customer_type').val() !== 'existing' && !$('#customer_name').val()) {
+        // Validate customer selection - always required for edit
+        if (!$('#customer_id').val()) {
             e.preventDefault();
-            alert('Please enter customer name.');
+            alert('Please select a customer.');
             return false;
         }
     });
 
-    // Initialize
-    if ($('#customer_type').val() === 'existing') {
-        loadCustomers();
-    }
+    // Initialize - always load customers for edit page
+    loadCustomers();
     calculateTotals();
 });
 </script>

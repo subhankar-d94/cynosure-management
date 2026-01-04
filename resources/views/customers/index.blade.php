@@ -183,7 +183,7 @@
                             <th width="140">Total Spent</th>
                             <th width="140">Last Order</th>
                             <th width="100">Status</th>
-                            <th width="150" class="text-center">Actions</th>
+                            <th width="200" class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
