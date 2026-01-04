@@ -379,13 +379,36 @@ $(document).ready(function() {
     // Load customers for selection
     function loadCustomers() {
         $.get('/customers/data/list', function(response) {
-            const customers = response.success ? response.data.data : [];
+            console.log('Customer response:', response);
+
+            // Handle different response structures
+            let customers = [];
+            if (response.success && response.data) {
+                customers = response.data.data || response.data || [];
+            } else if (Array.isArray(response)) {
+                customers = response;
+            }
+
+            console.log('Customers array:', customers);
+
             const select = $('#customer_id');
             select.empty().append('<option value="">Choose a customer...</option>');
+
+            if (customers.length === 0) {
+                select.append('<option value="" disabled>No customers found</option>');
+                console.warn('No customers loaded');
+                return;
+            }
+
             customers.forEach(function(customer) {
                 const selected = customer.id == {{ $order->customer_id ?? 'null' }} ? 'selected' : '';
                 select.append(`<option value="${customer.id}" data-name="${customer.name}" data-phone="${customer.phone || ''}" ${selected}>${customer.name} - ${customer.phone || 'No phone'}</option>`);
             });
+
+            console.log('Loaded ' + customers.length + ' customers');
+        }).fail(function(xhr, status, error) {
+            console.error('Error loading customers:', error);
+            $('#customer_id').html('<option value="">Error loading customers</option>');
         });
     }
 
