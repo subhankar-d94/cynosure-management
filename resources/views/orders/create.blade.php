@@ -361,7 +361,7 @@ $(document).ready(function() {
 
     // Load customers for selection
     function loadCustomers() {
-        $.get('/customers/data/list', function(response) {
+        $.get('/customers/data/list', { per_page: 10000 }, function(response) {
             console.log('Customer response:', response);
 
             // Handle different response structures
