@@ -527,14 +527,14 @@ function renderOrdersTable(orders) {
                     </td>
                     <td>
                         <div>
-                            <h6 class="mb-0">${order.customer ? order.customer.name : 'Walk-in Customer'}</h6>
-                            <small class="text-muted">${order.customer ? order.customer.phone : 'No email'}</small>
+                            <h6 class="mb-0">${order.customer ? order.customer.name : 'Guest Customer'}</h6>
+                            <small class="text-muted">${order.customer ? order.customer.phone : 'No phone'}</small>
                         </div>
                     </td>
                     <td>
                         <div>
-                            <strong>${new Date(order.created_at).toLocaleDateString()}</strong>
-                            <small class="d-block text-muted">${new Date(order.created_at).toLocaleTimeString()}</small>
+                            <strong>${new Date(order.order_date).toLocaleDateString()}</strong>
+                            <small class="d-block text-muted">Order Date</small>
                         </div>
                     </td>
                     <td>

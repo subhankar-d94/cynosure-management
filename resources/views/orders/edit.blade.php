@@ -85,7 +85,7 @@
                                 <div class="mb-3">
                                     <label for="customer_id" class="form-label">Select Customer *</label>
                                     <select class="form-select" id="customer_id" name="customer_id" size="5" required>
-                                        <option value="">Loading customers...</option>
+                                        <option value="">Choose a customer...</option>
                                     </select>
                                 </div>
                             </div>
@@ -393,8 +393,10 @@ $(document).ready(function() {
     $('#customer_search').on('input', function() {
         const searchTerm = $(this).val().toLowerCase();
         $('#customer_id option').each(function() {
-            const name = $(this).data('name') ? $(this).data('name').toLowerCase() : '';
-            const phone = $(this).data('phone') ? $(this).data('phone').toLowerCase() : '';
+            const nameData = $(this).data('name');
+            const phoneData = $(this).data('phone');
+            const name = (nameData && typeof nameData === 'string') ? nameData.toLowerCase() : '';
+            const phone = (phoneData && typeof phoneData === 'string') ? phoneData.toLowerCase() : '';
             const text = $(this).text().toLowerCase();
 
             if (name.includes(searchTerm) || phone.includes(searchTerm) || text.includes(searchTerm)) {

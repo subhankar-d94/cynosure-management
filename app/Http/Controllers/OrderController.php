@@ -50,10 +50,10 @@ class OrderController extends Controller
 
             $validator = Validator::make($data, [
                 'order_date' => 'required|date',
-                'customer_type' => 'required|in:existing,walk-in,new',
+                'customer_type' => 'required|in:existing,new',
                 'customer_id' => 'required_if:customer_type,existing|exists:customers,id',
-                'customer_name' => 'required_if:customer_type,walk-in,new|string|max:255',
-                'customer_phone' => 'required_if:customer_type,walk-in,new|string|max:20',
+                'customer_name' => 'required_if:customer_type,new|string|max:255',
+                'customer_phone' => 'required_if:customer_type,new|string|max:20',
                 'customer_email' => 'nullable|email|max:255',
                 'customer_address' => 'nullable|string',
                 'items' => 'required|array|min:1',
@@ -74,17 +74,17 @@ class OrderController extends Controller
 
             DB::beginTransaction();
 
-            // Handle customer creation for new/walk-in customers
+            // Handle customer creation for new customers
             $customerId = null;
             if ($request->customer_type === 'existing' && $request->customer_id) {
                 $customerId = $request->customer_id;
             } else {
-                // Create new customer record for walk-in or new customers
+                // Create new customer record
                 $customerData = [
                     'name' => $request->customer_name,
                     'phone' => $request->customer_phone,
                     'email' => $request->customer_email,
-                    'customer_type' => $request->customer_type === 'new' ? 'individual' : 'walk-in',
+                    'customer_type' => 'individual',  // Always individual for new customers
                     'status' => 'active',
                     'created_at' => now(),
                     'updated_at' => now()
@@ -96,10 +96,10 @@ class OrderController extends Controller
             // Generate unique order number
             $orderNumber = Order::generateOrderNumber();
 
-            // Create order
+            // Create order - customer_id is already set above
             $orderData = [
                 'order_number' => $orderNumber,
-                'customer_id' => $customerId,
+                'customer_id' => $customerId,  // This is set whether existing or newly created
                 'order_date' => $request->order_date,
                 'status' => Order::STATUS_PENDING,
                 'priority' => $request->priority ?? 'medium',
@@ -116,17 +116,6 @@ class OrderController extends Controller
                 'created_at' => now(),
                 'updated_at' => now()
             ];
-
-            // Handle customer data for store method
-            if ($request->customer_type === 'existing' && $request->customer_id) {
-                $orderData['customer_id'] = $request->customer_id;
-            } else {
-                $orderData['customer_id'] = null;
-                $orderData['customer_name'] = $request->customer_name;
-                $orderData['customer_phone'] = $request->customer_phone;
-                $orderData['customer_email'] = $request->customer_email;
-                $orderData['customer_address'] = $request->customer_address;
-            }
 
             $orderId = DB::table('orders')->insertGetId($orderData);
 
@@ -215,10 +204,8 @@ class OrderController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'order_date' => 'required|date',
-                'customer_type' => 'required|in:existing,walk-in',
-                'customer_id' => 'nullable|exists:customers,id',
-                'customer_name' => 'required_if:customer_type,walk-in|string|max:255',
-                'customer_phone' => 'required_if:customer_type,walk-in|string|max:20',
+                'customer_type' => 'required|in:existing',  // Only existing allowed when editing
+                'customer_id' => 'required|exists:customers,id',  // Customer ID required when editing
                 'items' => 'required|array|min:1',
                 'items.*.product_id' => 'required|integer',
                 'items.*.quantity' => 'required|integer|min:1',
@@ -248,6 +235,7 @@ class OrderController extends Controller
 
             // Update order
             $orderData = [
+                'customer_id' => $request->customer_id,  // Always link to existing customer when editing
                 'order_date' => $request->order_date,
                 'expected_delivery' => $request->expected_delivery,
                 'priority' => $request->priority ?? 'medium',
@@ -262,21 +250,6 @@ class OrderController extends Controller
                 'notes' => $request->notes,
                 'updated_at' => now()
             ];
-
-            // Handle customer data
-            if ($request->customer_type === 'existing' && $request->customer_id) {
-                $orderData['customer_id'] = $request->customer_id;
-                $orderData['customer_name'] = null;
-                $orderData['customer_phone'] = null;
-                $orderData['customer_email'] = null;
-                $orderData['customer_address'] = null;
-            } else {
-                $orderData['customer_id'] = null;
-                $orderData['customer_name'] = $request->customer_name;
-                $orderData['customer_phone'] = $request->customer_phone;
-                $orderData['customer_email'] = $request->customer_email;
-                $orderData['customer_address'] = $request->customer_address;
-            }
 
             DB::table('orders')->where('id', $id)->update($orderData);
 
@@ -789,10 +762,9 @@ class OrderController extends Controller
                     'orders.order_date',
                     'orders.status',
                     'orders.priority',
-                    'orders.total',
+                    'orders.total_amount',
                     'orders.payment_status',
-                    'customers.name as customer_name',
-                    'orders.customer_name as walk_in_name'
+                    'customers.name as customer_name'
                 ])
                 ->whereIn('orders.id', $orderIds)
                 ->get();
@@ -800,10 +772,10 @@ class OrderController extends Controller
             $csvData = "Order Number,Order Date,Customer,Status,Priority,Total,Payment Status\n";
 
             foreach ($orders as $order) {
-                $customerName = $order->customer_name ?: $order->walk_in_name ?: 'Walk-in';
+                $customerName = $order->customer_name ?: 'Guest Customer';
                 $csvData .= '"' . $order->order_number . '","' . $order->order_date . '","' .
                            $customerName . '","' . $order->status . '","' . $order->priority . '","' .
-                           number_format($order->total, 2) . '","' . $order->payment_status . '"' . "\n";
+                           number_format($order->total_amount, 2) . '","' . $order->payment_status . '"' . "\n";
             }
 
             $filename = 'orders_export_' . date('Y-m-d_H-i-s') . '.csv';

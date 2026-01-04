@@ -375,8 +375,10 @@ $(document).ready(function() {
     $('#customer_search').on('input', function() {
         const searchTerm = $(this).val().toLowerCase();
         $('#customer_id option').each(function() {
-            const name = $(this).data('name') ? $(this).data('name').toLowerCase() : '';
-            const phone = $(this).data('phone') ? $(this).data('phone').toLowerCase() : '';
+            const nameData = $(this).data('name');
+            const phoneData = $(this).data('phone');
+            const name = (nameData && typeof nameData === 'string') ? nameData.toLowerCase() : '';
+            const phone = (phoneData && typeof phoneData === 'string') ? phoneData.toLowerCase() : '';
             const text = $(this).text().toLowerCase();
 
             if (name.includes(searchTerm) || phone.includes(searchTerm) || text.includes(searchTerm)) {
