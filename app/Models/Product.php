@@ -22,6 +22,10 @@ class Product extends Model
         'is_customizable',
         'sku',
         'images',
+        'stock_quantity',
+        'reorder_level',
+        'cost_per_unit',
+        'supplier_id',
     ];
 
     protected $casts = [
@@ -30,6 +34,9 @@ class Product extends Model
         'dimensions' => 'array',
         'is_customizable' => 'boolean',
         'images' => 'array',
+        'stock_quantity' => 'integer',
+        'reorder_level' => 'integer',
+        'cost_per_unit' => 'decimal:2',
     ];
 
     public function category(): BelongsTo
@@ -37,9 +44,9 @@ class Product extends Model
         return $this->belongsTo(Category::class);
     }
 
-    public function inventory(): HasOne
+    public function supplier(): BelongsTo
     {
-        return $this->hasOne(Inventory::class);
+        return $this->belongsTo(Supplier::class);
     }
 
     public function orderItems(): HasMany
@@ -122,5 +129,38 @@ class Product extends Model
     public function getFormattedSkuAttribute(): string
     {
         return $this->sku ?? 'Auto-generated';
+    }
+
+    // Stock management scopes
+    public function scopeLowStock($query)
+    {
+        return $query->whereColumn('stock_quantity', '<=', 'reorder_level')
+                     ->where('stock_quantity', '>', 0);
+    }
+
+    public function scopeOutOfStock($query)
+    {
+        return $query->where('stock_quantity', 0);
+    }
+
+    public function scopeInStock($query)
+    {
+        return $query->where('stock_quantity', '>', 0);
+    }
+
+    // Stock management helper methods
+    public function getStockValueAttribute(): float
+    {
+        return $this->stock_quantity * ($this->cost_per_unit ?? 0);
+    }
+
+    public function isLowStock(): bool
+    {
+        return $this->stock_quantity <= $this->reorder_level && $this->stock_quantity > 0;
+    }
+
+    public function isOutOfStock(): bool
+    {
+        return $this->stock_quantity == 0;
     }
 }
