@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Customer;
 use App\Models\Product;
-use App\Models\Inventory;
 use App\Models\Purchase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -194,23 +193,22 @@ class AnalyticsController extends Controller
     public function getInventoryData($period = '30')
     {
         // Stock levels by category
-        $stockByCategory = Product::with('category', 'inventory')
-            ->whereHas('inventory')
+        $stockByCategory = Product::with('category')
             ->get()
             ->groupBy('category.name')
             ->map(function ($products) {
                 return [
                     'total_products' => $products->count(),
-                    'total_stock' => $products->sum('inventory.quantity_in_stock'),
+                    'total_stock' => $products->sum('stock_quantity'),
                     'total_value' => $products->sum(function ($product) {
-                        return $product->price * $product->inventory->quantity_in_stock;
+                        return $product->stock_quantity * ($product->cost_per_unit ?? 0);
                     })
                 ];
             });
 
         // Low stock alerts
-        $lowStockProducts = Inventory::with('product')
-            ->whereRaw('quantity_in_stock <= reorder_level')
+        $lowStockProducts = Product::with('category')
+            ->lowStock()
             ->get();
 
         // Inventory movement over time (check if table exists)
@@ -461,13 +459,13 @@ class AnalyticsController extends Controller
             ->whereNotIn('status', ['cancelled'])
             ->sum('total_amount');
 
-        // Calculate COGS (Cost of Goods Sold) - using inventory cost_per_unit
+        // Calculate COGS (Cost of Goods Sold) - using product cost_per_unit
         $cogs = DB::table('order_items')
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
-            ->join('inventories', 'order_items.product_id', '=', 'inventories.product_id')
+            ->join('products', 'order_items.product_id', '=', 'products.id')
             ->whereBetween('orders.order_date', [$startDate, $endDate])
             ->whereNotIn('orders.status', ['cancelled'])
-            ->selectRaw('SUM(order_items.quantity * inventories.cost_per_unit) as total_cogs')
+            ->selectRaw('SUM(order_items.quantity * COALESCE(products.cost_per_unit, 0)) as total_cogs')
             ->value('total_cogs') ?? 0;
 
         // Calculate Purchase Costs (total spend on purchases)
@@ -484,7 +482,6 @@ class AnalyticsController extends Controller
         $topProducts = DB::table('order_items')
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
             ->join('products', 'order_items.product_id', '=', 'products.id')
-            ->join('inventories', 'order_items.product_id', '=', 'inventories.product_id')
             ->whereBetween('orders.order_date', [$startDate, $endDate])
             ->whereNotIn('orders.status', ['cancelled'])
             ->selectRaw('
@@ -492,8 +489,8 @@ class AnalyticsController extends Controller
                 products.sku,
                 SUM(order_items.quantity) as units_sold,
                 SUM(order_items.quantity * order_items.unit_price) as revenue,
-                SUM(order_items.quantity * inventories.cost_per_unit) as cogs,
-                SUM(order_items.quantity * order_items.unit_price) - SUM(order_items.quantity * inventories.cost_per_unit) as profit
+                SUM(order_items.quantity * COALESCE(products.cost_per_unit, 0)) as cogs,
+                SUM(order_items.quantity * order_items.unit_price) - SUM(order_items.quantity * COALESCE(products.cost_per_unit, 0)) as profit
             ')
             ->groupBy('products.id', 'products.name', 'products.sku')
             ->orderByDesc('profit')
@@ -505,14 +502,13 @@ class AnalyticsController extends Controller
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
             ->join('products', 'order_items.product_id', '=', 'products.id')
             ->join('categories', 'products.category_id', '=', 'categories.id')
-            ->join('inventories', 'order_items.product_id', '=', 'inventories.product_id')
             ->whereBetween('orders.order_date', [$startDate, $endDate])
             ->whereNotIn('orders.status', ['cancelled'])
             ->selectRaw('
                 categories.name as category_name,
                 SUM(order_items.quantity * order_items.unit_price) as revenue,
-                SUM(order_items.quantity * inventories.cost_per_unit) as cogs,
-                SUM(order_items.quantity * order_items.unit_price) - SUM(order_items.quantity * inventories.cost_per_unit) as profit
+                SUM(order_items.quantity * COALESCE(products.cost_per_unit, 0)) as cogs,
+                SUM(order_items.quantity * order_items.unit_price) - SUM(order_items.quantity * COALESCE(products.cost_per_unit, 0)) as profit
             ')
             ->groupBy('categories.id', 'categories.name')
             ->orderByDesc('profit')
@@ -521,14 +517,14 @@ class AnalyticsController extends Controller
         // Get daily profit trend
         $dailyProfit = DB::table('orders')
             ->join('order_items', 'orders.id', '=', 'order_items.order_id')
-            ->join('inventories', 'order_items.product_id', '=', 'inventories.product_id')
+            ->join('products', 'order_items.product_id', '=', 'products.id')
             ->whereBetween('orders.order_date', [$startDate, $endDate])
             ->whereNotIn('orders.status', ['cancelled'])
             ->selectRaw('
                 DATE(orders.order_date) as date,
                 SUM(order_items.quantity * order_items.unit_price) as revenue,
-                SUM(order_items.quantity * inventories.cost_per_unit) as cogs,
-                SUM(order_items.quantity * order_items.unit_price) - SUM(order_items.quantity * inventories.cost_per_unit) as profit
+                SUM(order_items.quantity * COALESCE(products.cost_per_unit, 0)) as cogs,
+                SUM(order_items.quantity * order_items.unit_price) - SUM(order_items.quantity * COALESCE(products.cost_per_unit, 0)) as profit
             ')
             ->groupBy('date')
             ->orderBy('date')
@@ -558,13 +554,13 @@ class AnalyticsController extends Controller
 
         $data = DB::table('orders')
             ->join('order_items', 'orders.id', '=', 'order_items.order_id')
-            ->leftJoin('inventories', 'order_items.product_id', '=', 'inventories.product_id')
+            ->join('products', 'order_items.product_id', '=', 'products.id')
             ->whereBetween('orders.order_date', [$startDate, Carbon::now()])
             ->whereNotIn('orders.status', ['cancelled'])
             ->selectRaw('
                 DATE(orders.order_date) as date,
                 SUM(order_items.quantity * order_items.unit_price) as revenue,
-                SUM(order_items.quantity * COALESCE(inventories.cost_per_unit, 0)) as cost
+                SUM(order_items.quantity * COALESCE(products.cost_per_unit, 0)) as cost
             ')
             ->groupBy('date')
             ->orderBy('date')

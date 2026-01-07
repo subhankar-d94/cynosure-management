@@ -4,13 +4,13 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
-use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\PurchaseItemUsageController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\AnalyticsController;
@@ -100,30 +100,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/data/list', [ProductController::class, 'getData'])->name('data');
         Route::get('/data/for-order', [ProductController::class, 'getForOrder'])->name('for-order');
         Route::post('/preview-sku', [ProductController::class, 'previewSku'])->name('preview-sku');
-    });
-
-    // Inventory Routes
-    Route::prefix('inventory')->name('inventory.')->group(function () {
-        Route::get('/', [InventoryController::class, 'index'])->name('index');
-        Route::get('/low-stock', [InventoryController::class, 'lowStock'])->name('low-stock');
-        Route::get('/{inventory}', [InventoryController::class, 'show'])->name('show');
-        Route::get('/{inventory}/edit', [InventoryController::class, 'edit'])->name('edit');
-        Route::put('/{inventory}', [InventoryController::class, 'update'])->name('update');
-
-        // Inventory management routes
-        Route::post('/adjust', [InventoryController::class, 'adjustStock'])->name('adjust');
-        Route::post('/bulk-adjust', [InventoryController::class, 'bulkAdjust'])->name('bulk-adjust');
-        Route::get('/movements/history', [InventoryController::class, 'movementHistory'])->name('movements');
-        Route::post('/reorder/{inventory}', [InventoryController::class, 'createReorderAlert'])->name('reorder');
-        Route::get('/valuation', [InventoryController::class, 'valuation'])->name('valuation');
-        Route::get('/data/stats', [InventoryController::class, 'getStats'])->name('stats');
-        Route::get('/data/list', [InventoryController::class, 'getData'])->name('data');
-        Route::get('/{inventory}/history', [InventoryController::class, 'history'])->name('history');
-        Route::get('/{inventory}/details', [InventoryController::class, 'getDetails'])->name('details');
-        Route::get('/{inventory}/chart-data', [InventoryController::class, 'getChartData'])->name('chart-data');
-        Route::get('/{inventory}/history-data', [InventoryController::class, 'getHistoryData'])->name('history-data');
-        Route::get('/{inventory}/export-history', [InventoryController::class, 'exportHistory'])->name('export-history');
-        Route::get('/export', [InventoryController::class, 'export'])->name('export');
     });
 
     // Customer Routes
@@ -260,6 +236,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/bulk-cancel', [PurchaseController::class, 'bulkCancel'])->name('bulk-cancel');
         Route::post('/bulk-export', [PurchaseController::class, 'bulkExport'])->name('bulk-export');
         Route::get('/export', [PurchaseController::class, 'export'])->name('export');
+    });
+
+    // Purchase Item Usage Tracking Routes
+    Route::prefix('purchase-items')->name('purchase-items.')->group(function () {
+        Route::post('/{purchaseItem}/record-usage', [PurchaseItemUsageController::class, 'recordUsage'])->name('record-usage');
+        Route::get('/{purchaseItem}/usage-history', [PurchaseItemUsageController::class, 'getUsageHistory'])->name('usage-history');
+        Route::post('/bulk-record-usage', [PurchaseItemUsageController::class, 'bulkRecordUsage'])->name('bulk-record-usage');
+        Route::get('/for-usage', [PurchaseItemUsageController::class, 'getItemsForUsage'])->name('for-usage');
     });
 
     // Report Routes

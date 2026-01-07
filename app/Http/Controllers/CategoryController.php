@@ -91,14 +91,12 @@ class CategoryController extends Controller
 
     public function show(Category $category)
     {
-        $category->load(['parent', 'children.products', 'products.inventory']);
+        $category->load(['parent', 'children.products', 'products']);
 
         $stats = [
             'total_products' => $category->products()->count(),
             'children_count' => $category->children()->count(),
-            'active_products' => $category->products()->whereHas('inventory', function($q) {
-                $q->where('quantity_in_stock', '>', 0);
-            })->count()
+            'active_products' => $category->products()->where('stock_quantity', '>', 0)->count()
         ];
 
         if (request()->expectsJson()) {

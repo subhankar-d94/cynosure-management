@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Customer;
-use App\Models\Inventory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -97,21 +96,22 @@ class ReportController extends Controller
     // Inventory Reports
     public function inventory()
     {
-        $inventoryData = Inventory::with('product', 'supplier')->get();
+        $inventoryData = Product::with('category', 'supplier')->get();
         return view('reports.inventory', compact('inventoryData'));
     }
 
     public function inventoryValuation()
     {
-        $valuation = Inventory::with('product')
+        $valuation = Product::with('category')
             ->get()
-            ->map(function ($inventory) {
+            ->map(function ($product) {
                 return [
-                    'product_name' => $inventory->product->name,
-                    'sku' => $inventory->product->sku,
-                    'stock_quantity' => $inventory->quantity_in_stock,
-                    'unit_price' => $inventory->product->price,
-                    'total_value' => $inventory->quantity_in_stock * $inventory->product->price
+                    'product_name' => $product->name,
+                    'sku' => $product->sku,
+                    'category' => $product->category->name ?? 'N/A',
+                    'stock_quantity' => $product->stock_quantity,
+                    'cost_per_unit' => $product->cost_per_unit ?? 0,
+                    'total_value' => $product->stock_value
                 ];
             });
 
@@ -243,10 +243,8 @@ class ReportController extends Controller
     {
         $summary = [
             'total_products' => Product::count(),
-            'total_stock_value' => Inventory::join('products', 'inventories.product_id', '=', 'products.id')
-                ->selectRaw('SUM(inventories.quantity_in_stock * products.price) as total_value')
-                ->value('total_value'),
-            'low_stock_items' => Inventory::whereRaw('quantity_in_stock <= reorder_level')->count()
+            'total_stock_value' => Product::all()->sum('stock_value'),
+            'low_stock_items' => Product::lowStock()->count()
         ];
 
         return response()->json(['success' => true, 'data' => $summary]);

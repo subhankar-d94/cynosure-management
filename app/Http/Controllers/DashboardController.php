@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Customer;
-use App\Models\Inventory;
 use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\Product;
@@ -52,10 +51,10 @@ class DashboardController extends Controller
         // Calculate monthly COGS (Cost of Goods Sold)
         $monthlyCogs = DB::table('order_items')
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
-            ->join('inventories', 'order_items.product_id', '=', 'inventories.product_id')
+            ->join('products', 'order_items.product_id', '=', 'products.id')
             ->where('orders.created_at', '>=', $thisMonth)
             ->whereNotIn('orders.status', ['cancelled'])
-            ->selectRaw('SUM(order_items.quantity * inventories.cost_per_unit) as total_cogs')
+            ->selectRaw('SUM(order_items.quantity * COALESCE(products.cost_per_unit, 0)) as total_cogs')
             ->value('total_cogs') ?? 0;
 
         // Calculate gross profit
@@ -74,7 +73,7 @@ class DashboardController extends Controller
             'pending_orders' => Order::where('status', 'pending')->count(),
             'total_customers' => Customer::count(),
             'total_products' => Product::count(),
-            'low_stock_items' => Inventory::lowStock()->count(),
+            'low_stock_items' => Product::lowStock()->count(),
             'monthly_revenue' => $monthlyRevenue,
             'monthly_cogs' => $monthlyCogs,
             'monthly_profit' => $monthlyProfit,
@@ -102,16 +101,18 @@ class DashboardController extends Controller
 
     public function getLowStockAlerts()
     {
-        return Inventory::with(['product'])
+        return Product::with(['category'])
             ->lowStock()
             ->limit(10)
             ->get()
-            ->map(function ($inventory) {
+            ->map(function ($product) {
                 return [
-                    'product_name' => $inventory->product->name,
-                    'current_stock' => $inventory->quantity_in_stock,
-                    'reorder_level' => $inventory->reorder_level,
-                    'shortage' => $inventory->reorder_level - $inventory->quantity_in_stock,
+                    'product_name' => $product->name,
+                    'sku' => $product->sku,
+                    'current_stock' => $product->stock_quantity,
+                    'reorder_level' => $product->reorder_level,
+                    'shortage' => $product->reorder_level - $product->stock_quantity,
+                    'category' => $product->category->name ?? 'N/A',
                 ];
             });
     }
@@ -182,8 +183,8 @@ class DashboardController extends Controller
 
     private function getInventoryAlertsData(): array
     {
-        $lowStock = Inventory::lowStock()->count();
-        $normalStock = Inventory::whereColumn('quantity_in_stock', '>', 'reorder_level')->count();
+        $lowStock = Product::lowStock()->count();
+        $normalStock = Product::whereColumn('stock_quantity', '>', 'reorder_level')->count();
 
         return [
             'low_stock' => $lowStock,

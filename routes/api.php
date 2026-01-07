@@ -2,11 +2,11 @@
 
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CustomerController;
-use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\PurchaseItemUsageController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -44,15 +44,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/search/{query}', [CustomerController::class, 'apiSearch'])->name('search');
         Route::get('/{customer}/orders', [CustomerController::class, 'apiOrders'])->name('orders');
         Route::get('/{customer}/addresses', [CustomerController::class, 'apiAddresses'])->name('addresses');
-    });
-
-    // Inventory API
-    Route::prefix('inventory')->name('api.inventory.')->group(function () {
-        Route::get('/', [InventoryController::class, 'apiIndex'])->name('index');
-        Route::get('/low-stock', [InventoryController::class, 'apiLowStock'])->name('low-stock');
-        Route::get('/{inventory}', [InventoryController::class, 'apiShow'])->name('show');
-        Route::post('/{inventory}/quick-adjust', [InventoryController::class, 'quickAdjust'])->name('quick-adjust');
-        Route::get('/stats/summary', [InventoryController::class, 'apiStats'])->name('stats');
     });
 
     // Order API
@@ -97,6 +88,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/financial-summary', [ReportController::class, 'getFinancialSummary'])->name('financial-summary');
     });
 
+    // Purchase Item Usage API
+    Route::prefix('purchase-items')->name('api.purchase-items.')->group(function () {
+        Route::get('/for-usage', [PurchaseItemUsageController::class, 'getItemsForUsage'])->name('for-usage');
+        Route::get('/{purchaseItem}/usage-history', [PurchaseItemUsageController::class, 'getUsageHistory'])->name('usage-history');
+        Route::post('/{purchaseItem}/record-usage', [PurchaseItemUsageController::class, 'recordUsage'])->name('record-usage');
+        Route::post('/bulk-record-usage', [PurchaseItemUsageController::class, 'bulkRecordUsage'])->name('bulk-record-usage');
+    });
+
     // Search API
     Route::prefix('search')->name('api.search.')->group(function () {
         Route::get('/global/{query}', function ($query) {
@@ -138,8 +137,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Quick Actions API
     Route::prefix('quick-actions')->name('api.quick.')->group(function () {
-        Route::post('/stock-alert/{product}', [InventoryController::class, 'createStockAlert'])->name('stock-alert');
-        Route::post('/reorder/{product}', [InventoryController::class, 'createReorder'])->name('reorder');
         Route::post('/order-note/{order}', [OrderController::class, 'addNote'])->name('order-note');
         Route::post('/customer-note/{customer}', [CustomerController::class, 'addNote'])->name('customer-note');
     });
@@ -148,7 +145,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('widgets')->name('api.widgets.')->group(function () {
         Route::get('/sales-chart/{period?}', [AnalyticsController::class, 'getSalesChart'])->name('sales-chart');
         Route::get('/order-stats', [OrderController::class, 'getOrderStats'])->name('order-stats');
-        Route::get('/inventory-alerts', [InventoryController::class, 'getInventoryAlerts'])->name('inventory-alerts');
         Route::get('/recent-orders/{limit?}', [OrderController::class, 'getRecentOrders'])->name('recent-orders');
         Route::get('/top-products/{limit?}', [ProductController::class, 'getTopProducts'])->name('top-products');
         Route::get('/top-customers/{limit?}', [CustomerController::class, 'getTopCustomers'])->name('top-customers');
@@ -158,7 +154,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('bulk')->name('api.bulk.')->group(function () {
         Route::post('/products/update', [ProductController::class, 'bulkUpdate'])->name('products.update');
         Route::post('/orders/status', [OrderController::class, 'bulkUpdateStatus'])->name('orders.status');
-        Route::post('/inventory/adjust', [InventoryController::class, 'bulkAdjust'])->name('inventory.adjust');
         Route::delete('/products/delete', [ProductController::class, 'bulkDelete'])->name('products.delete');
         Route::delete('/customers/delete', [CustomerController::class, 'bulkDelete'])->name('customers.delete');
     });
@@ -168,7 +163,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/products', [ProductController::class, 'export'])->name('products');
         Route::post('/customers', [CustomerController::class, 'export'])->name('customers');
         Route::post('/orders', [OrderController::class, 'export'])->name('orders');
-        Route::post('/inventory', [InventoryController::class, 'export'])->name('inventory');
         Route::post('/reports', [ReportController::class, 'export'])->name('reports');
     });
 
@@ -176,7 +170,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('import')->name('api.import.')->group(function () {
         Route::post('/products', [ProductController::class, 'import'])->name('products');
         Route::post('/customers', [CustomerController::class, 'import'])->name('customers');
-        Route::post('/inventory', [InventoryController::class, 'import'])->name('inventory');
         Route::get('/template/{type}', function ($type) {
             // Return CSV templates for import
             $templates = [

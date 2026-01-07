@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
-use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\Supplier;
 use App\Services\ImageUploadService;
@@ -16,7 +15,7 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Product::with(['category', 'inventory']);
+        $query = Product::with(['category', 'supplier']);
 
         // Search filter
         if ($request->filled('search')) {
@@ -37,20 +36,15 @@ class ProductController extends Controller
         if ($request->filled('stock_filter') && $request->stock_filter != '') {
             switch ($request->stock_filter) {
                 case 'in_stock':
-                    $query->whereHas('inventory', function ($q) {
-                        $q->whereColumn('quantity_in_stock', '>', 'reorder_level');
-                    });
+                    $query->where('stock_quantity', '>', 0)
+                          ->whereColumn('stock_quantity', '>', 'reorder_level');
                     break;
                 case 'low_stock':
-                    $query->whereHas('inventory', function ($q) {
-                        $q->whereColumn('quantity_in_stock', '<=', 'reorder_level')
-                          ->where('quantity_in_stock', '>', 0);
-                    });
+                    $query->whereColumn('stock_quantity', '<=', 'reorder_level')
+                          ->where('stock_quantity', '>', 0);
                     break;
                 case 'out_of_stock':
-                    $query->whereHas('inventory', function ($q) {
-                        $q->where('quantity_in_stock', '=', 0);
-                    });
+                    $query->where('stock_quantity', 0);
                     break;
             }
         }
@@ -65,9 +59,7 @@ class ProductController extends Controller
         $sortOrder = $request->input('sort_order', 'desc');
 
         if ($sortBy === 'stock') {
-            $query->leftJoin('inventories', 'products.id', '=', 'inventories.product_id')
-                  ->orderBy('inventories.quantity_in_stock', $sortOrder)
-                  ->select('products.*');
+            $query->orderBy('stock_quantity', $sortOrder);
         } else {
             $query->orderBy($sortBy, $sortOrder);
         }
@@ -128,7 +120,11 @@ class ProductController extends Controller
                 'weight' => $request->weight,
                 'dimensions' => $request->dimensions,
                 'is_customizable' => $request->boolean('is_customizable'),
-                'sku' => $request->sku ?: null // Let model auto-generate if empty
+                'sku' => $request->sku ?: null, // Let model auto-generate if empty
+                'stock_quantity' => $request->input('initial_stock', 0),
+                'reorder_level' => $request->input('reorder_level', 10),
+                'cost_per_unit' => $request->input('cost_per_unit'),
+                'supplier_id' => $request->supplier_id
             ]);
 
             // Handle image uploads
@@ -140,22 +136,12 @@ class ProductController extends Controller
                 }
             }
 
-            if ($request->has('initial_stock') || $request->has('cost_per_unit')) {
-                Inventory::create([
-                    'product_id' => $product->id,
-                    'quantity_in_stock' => $request->input('initial_stock', 0),
-                    'reorder_level' => $request->input('reorder_level', 10),
-                    'cost_per_unit' => $request->input('cost_per_unit', $request->base_price),
-                    'supplier_id' => $request->supplier_id
-                ]);
-            }
-
             DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Product created successfully',
-                'data' => $product->load(['category', 'inventory'])
+                'data' => $product->load(['category', 'supplier'])
             ], 201);
 
         } catch (\Exception $e) {
@@ -170,15 +156,15 @@ class ProductController extends Controller
 
     public function show(Product $product)
     {
-        $product->load(['category', 'inventory.supplier', 'orderItems.order']);
+        $product->load(['category', 'supplier', 'orderItems.order']);
 
         $stats = [
             'total_orders' => $product->orderItems()->count(),
             'total_quantity_sold' => $product->orderItems()->sum('quantity'),
             'total_revenue' => $product->orderItems()->sum('subtotal'),
             'average_order_value' => $product->orderItems()->avg('unit_price'),
-            'current_stock' => $product->inventory->quantity_in_stock ?? 0,
-            'stock_value' => ($product->inventory->quantity_in_stock ?? 0) * ($product->inventory->cost_per_unit ?? 0)
+            'current_stock' => $product->stock_quantity,
+            'stock_value' => $product->stock_value
         ];
 
         if (request()->expectsJson()) {
@@ -196,7 +182,7 @@ class ProductController extends Controller
 
     public function edit(Product $product)
     {
-        $product->load(['inventory']);
+        $product->load(['supplier']);
         $categories = Category::active()->get();
         $suppliers = \App\Models\Supplier::all();
 
@@ -296,7 +282,6 @@ class ProductController extends Controller
                 ], 422);
             }
 
-            $product->inventory()?->delete();
             $product->delete();
 
             return response()->json([
@@ -318,19 +303,13 @@ class ProductController extends Controller
             $newProduct = $product->replicate();
             $newProduct->name = $product->name . ' (Copy)';
             $newProduct->sku = $this->generateUniqueSku($product->sku);
+            $newProduct->stock_quantity = 0; // Reset stock for duplicate
             $newProduct->save();
-
-            if ($product->inventory) {
-                $newInventory = $product->inventory->replicate();
-                $newInventory->product_id = $newProduct->id;
-                $newInventory->quantity_in_stock = 0;
-                $newInventory->save();
-            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Product duplicated successfully',
-                'data' => $newProduct->load(['category', 'inventory'])
+                'data' => $newProduct->load(['category', 'supplier'])
             ], 201);
 
         } catch (\Exception $e) {
@@ -418,19 +397,13 @@ class ProductController extends Controller
         if ($request->has('stock_filter')) {
             switch ($request->stock_filter) {
                 case 'in_stock':
-                    $query->whereHas('inventory', function ($q) {
-                        $q->where('quantity_in_stock', '>', 0);
-                    });
+                    $query->where('stock_quantity', '>', 0);
                     break;
                 case 'low_stock':
-                    $query->whereHas('inventory', function ($q) {
-                        $q->whereColumn('quantity_in_stock', '<=', 'reorder_level');
-                    });
+                    $query->whereColumn('stock_quantity', '<=', 'reorder_level');
                     break;
                 case 'out_of_stock':
-                    $query->whereHas('inventory', function ($q) {
-                        $q->where('quantity_in_stock', '=', 0);
-                    });
+                    $query->where('stock_quantity', 0);
                     break;
             }
         }
@@ -450,9 +423,7 @@ class ProductController extends Controller
             $sortOrder = $request->input('sort_order', 'asc');
 
             if ($sortBy === 'stock') {
-                $query->leftJoin('inventories', 'products.id', '=', 'inventories.product_id')
-                      ->orderBy('inventories.quantity_in_stock', $sortOrder)
-                      ->select('products.*');
+                $query->orderBy('stock_quantity', $sortOrder);
             } else {
                 $query->orderBy($sortBy, $sortOrder);
             }
@@ -471,10 +442,8 @@ class ProductController extends Controller
 
     public function getForOrder(Request $request): JsonResponse
     {
-        $query = Product::with(['inventory', 'category'])
-            ->whereHas('inventory', function ($q) {
-                $q->where('quantity_in_stock', '>', 0);
-            });
+        $query = Product::with(['category'])
+            ->where('stock_quantity', '>', 0);
 
         if ($request->has('search') && $request->search) {
             $search = $request->search;
@@ -490,7 +459,7 @@ class ProductController extends Controller
                 'name' => $product->name,
                 'sku' => $product->sku,
                 'base_price' => $product->base_price,
-                'available_stock' => $product->inventory->quantity_in_stock ?? 0,
+                'available_stock' => $product->stock_quantity,
                 'category' => $product->category->name ?? 'Uncategorized',
                 'is_customizable' => $product->is_customizable
             ];

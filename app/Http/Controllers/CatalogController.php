@@ -38,7 +38,7 @@ class CatalogController extends Controller
 
         // Get products for this category (including all products)
         $productsQuery = Product::where('category_id', $category->id)
-            ->with(['category', 'inventory']);
+            ->with(['category']);
 
         // Apply filters
         if ($request->has('search') && $request->search) {
@@ -88,7 +88,6 @@ class CatalogController extends Controller
         // Get related products from same category (including all products)
         $relatedProducts = Product::where('category_id', $product->category_id)
             ->where('id', '!=', $product->id)
-            ->with('inventory')
             ->limit(4)
             ->get();
 
@@ -109,7 +108,7 @@ class CatalogController extends Controller
                   ->orWhere('description', 'LIKE', "%{$query}%")
                   ->orWhere('sku', 'LIKE', "%{$query}%");
             })
-            ->with(['category', 'inventory'])
+            ->with(['category'])
             ->orderBy('name')
             ->paginate(12);
 
