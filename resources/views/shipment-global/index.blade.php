@@ -77,44 +77,37 @@
                             @foreach($orders as $order)
                             <tr>
                                 <td>
-                                    @if(isset($order['awb']) || isset($order['tracking_number']) || isset($order['awb_number']))
-                                        <strong class="text-primary">
-                                            {{ $order['awb'] ?? $order['tracking_number'] ?? $order['awb_number'] ?? 'N/A' }}
-                                        </strong>
+                                    @if(isset($order['Awb_Number']) && $order['Awb_Number'])
+                                        <strong class="text-primary">{{ $order['Awb_Number'] }}</strong>
                                     @else
-                                        <span class="text-muted">-</span>
+                                        <span class="badge bg-secondary">Not Generated</span>
                                     @endif
                                 </td>
                                 <td>
                                     <small>
-                                        {{ isset($order['created_at']) ? \Carbon\Carbon::parse($order['created_at'])->format('d M Y') : (isset($order['date']) ? \Carbon\Carbon::parse($order['date'])->format('d M Y') : 'N/A') }}
-                                        @if(isset($order['created_at']))
-                                            <br><span class="text-muted">{{ \Carbon\Carbon::parse($order['created_at'])->format('h:i A') }}</span>
+                                        {{ isset($order['order_date']) ? \Carbon\Carbon::parse($order['order_date'])->format('d M Y') : 'N/A' }}
+                                        @if(isset($order['order_date']))
+                                            <br><span class="text-muted">{{ \Carbon\Carbon::parse($order['order_date'])->format('h:i A') }}</span>
                                         @endif
                                     </small>
                                 </td>
                                 <td>
-                                    <strong class="text-dark">
-                                        {{ $order['order_id'] ?? $order['id'] ?? $order['order_number'] ?? 'N/A' }}
-                                    </strong>
+                                    <div>
+                                        <strong class="text-dark">{{ $order['id'] ?? 'N/A' }}</strong>
+                                        @if(isset($order['channel_order_id']))
+                                            <br><small class="text-muted">{{ $order['channel_order_id'] }}</small>
+                                        @endif
+                                    </div>
                                 </td>
                                 <td>
                                     <div style="max-width: 250px;">
-                                        @if(isset($order['product_name']) || isset($order['products']))
-                                            <strong>{{ $order['product_name'] ?? 'N/A' }}</strong>
-                                        @elseif(isset($order['items']) && is_array($order['items']))
-                                            @foreach($order['items'] as $index => $item)
-                                                @if($index < 2)
-                                                    <div class="mb-1">
-                                                        <small><strong>{{ $item['name'] ?? $item['product_name'] ?? 'Product' }}</strong></small>
-                                                        @if(isset($item['quantity']))
-                                                            <br><small class="text-muted">Qty: {{ $item['quantity'] }}</small>
-                                                        @endif
-                                                    </div>
-                                                @endif
-                                            @endforeach
-                                            @if(count($order['items']) > 2)
-                                                <small class="text-muted">+{{ count($order['items']) - 2 }} more</small>
+                                        @if(isset($order['order_item_name']))
+                                            <strong>{{ $order['order_item_name'] }}</strong>
+                                            @if(isset($order['order_item_sku']))
+                                                <br><small class="text-muted">SKU: {{ $order['order_item_sku'] }}</small>
+                                            @endif
+                                            @if(isset($order['order_item_units']))
+                                                <br><small class="text-muted">Qty: {{ $order['order_item_units'] }}</small>
                                             @endif
                                         @else
                                             <span class="text-muted">-</span>
@@ -124,48 +117,38 @@
                                 <td>
                                     <div>
                                         <strong class="text-success">
-                                            ₹{{ number_format($order['amount'] ?? $order['total'] ?? $order['total_amount'] ?? 0, 2) }}
+                                            ₹{{ number_format($order['sub_total'] ?? 0, 2) }}
                                         </strong>
                                         @if(isset($order['payment_method']))
-                                            <br><small class="text-muted">{{ ucfirst($order['payment_method']) }}</small>
-                                        @endif
-                                        @if(isset($order['payment_status']))
-                                            <br><span class="badge badge-sm {{ strtolower($order['payment_status']) == 'paid' ? 'bg-success' : 'bg-warning' }}">
-                                                {{ ucfirst($order['payment_status']) }}
+                                            <br><span class="badge {{ strtolower($order['payment_method']) == 'prepaid' ? 'bg-success' : 'bg-warning' }}">
+                                                {{ $order['payment_method'] }}
                                             </span>
                                         @endif
                                     </div>
                                 </td>
                                 <td>
                                     <div style="max-width: 200px;">
-                                        <strong>{{ $order['customer_name'] ?? $order['name'] ?? $order['buyer_name'] ?? 'N/A' }}</strong>
-                                        @if(isset($order['customer_phone']) || isset($order['phone']) || isset($order['mobile']))
+                                        <strong>{{ $order['billing_customer_name'] ?? 'N/A' }}</strong>
+                                        @if(isset($order['billing_phone']))
                                             <br><small class="text-muted">
-                                                <i class="bi bi-telephone"></i> {{ $order['customer_phone'] ?? $order['phone'] ?? $order['mobile'] }}
-                                            </small>
-                                        @endif
-                                        @if(isset($order['customer_city']) || isset($order['city']))
-                                            <br><small class="text-muted">
-                                                <i class="bi bi-geo-alt"></i> {{ $order['customer_city'] ?? $order['city'] }}
+                                                <i class="bi bi-telephone"></i> {{ $order['billing_phone'] }}
                                             </small>
                                         @endif
                                     </div>
                                 </td>
                                 <td>
                                     @php
-                                        $status = strtolower($order['status'] ?? $order['order_status'] ?? 'pending');
+                                        $status = strtolower($order['status'] ?? 'new');
                                         $badgeClass = match($status) {
                                             'delivered' => 'bg-success',
                                             'shipped', 'in_transit', 'in transit' => 'bg-info',
                                             'processing', 'confirmed' => 'bg-warning',
                                             'cancelled', 'failed' => 'bg-danger',
-                                            'pending' => 'bg-secondary',
+                                            'new', 'pending' => 'bg-secondary',
                                             default => 'bg-secondary'
                                         };
                                     @endphp
-                                    <span class="badge {{ $badgeClass }}">
-                                        {{ ucfirst($order['status'] ?? $order['order_status'] ?? 'Pending') }}
-                                    </span>
+                                    <span class="badge {{ $badgeClass }}">{{ $order['status'] ?? 'NEW' }}</span>
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
@@ -230,12 +213,15 @@ function viewOrderDetails(order) {
     html += '<div class="col-md-6 mb-3">';
     html += '<h6 class="border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Order Information</h6>';
     html += '<table class="table table-sm table-borderless">';
-    html += `<tr><td width="40%"><strong>Order ID:</strong></td><td><span class="text-primary">${order.order_id || order.id || order.order_number || 'N/A'}</span></td></tr>`;
-    html += `<tr><td><strong>AWB No.:</strong></td><td><strong>${order.awb || order.tracking_number || order.awb_number || '-'}</strong></td></tr>`;
-    html += `<tr><td><strong>Status:</strong></td><td><span class="badge bg-primary">${order.status || order.order_status || 'N/A'}</span></td></tr>`;
-    html += `<tr><td><strong>Created:</strong></td><td>${order.created_at || order.date || 'N/A'}</td></tr>`;
-    if (order.updated_at) {
-        html += `<tr><td><strong>Updated:</strong></td><td>${order.updated_at}</td></tr>`;
+    html += `<tr><td width="40%"><strong>Order ID:</strong></td><td><span class="text-primary">${order.id || 'N/A'}</span></td></tr>`;
+    if (order.channel_order_id) {
+        html += `<tr><td><strong>Channel Order ID:</strong></td><td>${order.channel_order_id}</td></tr>`;
+    }
+    html += `<tr><td><strong>AWB Number:</strong></td><td><strong>${order.Awb_Number || '<span class="badge bg-secondary">Not Generated</span>'}</strong></td></tr>`;
+    html += `<tr><td><strong>Status:</strong></td><td><span class="badge bg-primary">${order.status || 'NEW'}</span></td></tr>`;
+    html += `<tr><td><strong>Order Date:</strong></td><td>${order.order_date || 'N/A'}</td></tr>`;
+    if (order.service_provider) {
+        html += `<tr><td><strong>Service Provider:</strong></td><td>${order.service_provider}</td></tr>`;
     }
     html += '</table>';
     html += '</div>';
@@ -244,14 +230,15 @@ function viewOrderDetails(order) {
     html += '<div class="col-md-6 mb-3">';
     html += '<h6 class="border-bottom pb-2"><i class="bi bi-cash me-2"></i>Payment Information</h6>';
     html += '<table class="table table-sm table-borderless">';
-    html += `<tr><td width="40%"><strong>Amount:</strong></td><td><strong class="text-success">₹${parseFloat(order.amount || order.total || order.total_amount || 0).toFixed(2)}</strong></td></tr>`;
+    html += `<tr><td width="40%"><strong>Sub Total:</strong></td><td><strong class="text-success">₹${parseFloat(order.sub_total || 0).toFixed(2)}</strong></td></tr>`;
+    html += `<tr><td><strong>Payment Method:</strong></td><td>`;
     if (order.payment_method) {
-        html += `<tr><td><strong>Method:</strong></td><td>${order.payment_method}</td></tr>`;
+        const paymentBadge = order.payment_method.toLowerCase() === 'prepaid' ? 'bg-success' : 'bg-warning';
+        html += `<span class="badge ${paymentBadge}">${order.payment_method}</span>`;
+    } else {
+        html += 'N/A';
     }
-    if (order.payment_status) {
-        const paymentBadge = order.payment_status.toLowerCase() === 'paid' ? 'bg-success' : 'bg-warning';
-        html += `<tr><td><strong>Status:</strong></td><td><span class="badge ${paymentBadge}">${order.payment_status}</span></td></tr>`;
-    }
+    html += `</td></tr>`;
     html += '</table>';
     html += '</div>';
 
@@ -259,60 +246,56 @@ function viewOrderDetails(order) {
     html += '<div class="col-md-6 mb-3">';
     html += '<h6 class="border-bottom pb-2"><i class="bi bi-person me-2"></i>Customer Information</h6>';
     html += '<table class="table table-sm table-borderless">';
-    html += `<tr><td width="40%"><strong>Name:</strong></td><td>${order.customer_name || order.name || order.buyer_name || 'N/A'}</td></tr>`;
-    html += `<tr><td><strong>Phone:</strong></td><td><i class="bi bi-telephone"></i> ${order.customer_phone || order.phone || order.mobile || 'N/A'}</td></tr>`;
-    if (order.customer_email || order.email) {
-        html += `<tr><td><strong>Email:</strong></td><td><i class="bi bi-envelope"></i> ${order.customer_email || order.email}</td></tr>`;
-    }
-    if (order.customer_city || order.city) {
-        html += `<tr><td><strong>City:</strong></td><td><i class="bi bi-geo-alt"></i> ${order.customer_city || order.city}</td></tr>`;
-    }
-    if (order.customer_address || order.address) {
-        html += `<tr><td colspan="2"><strong>Address:</strong><br>${order.customer_address || order.address}</td></tr>`;
-    }
+    html += `<tr><td width="40%"><strong>Name:</strong></td><td>${order.billing_customer_name || 'N/A'}</td></tr>`;
+    html += `<tr><td><strong>Phone:</strong></td><td><i class="bi bi-telephone"></i> ${order.billing_phone || 'N/A'}</td></tr>`;
     html += '</table>';
     html += '</div>';
 
     // Product Details
     html += '<div class="col-md-6 mb-3">';
     html += '<h6 class="border-bottom pb-2"><i class="bi bi-box me-2"></i>Product Details</h6>';
-    if (order.product_name || order.products) {
-        html += `<p><strong>${order.product_name || 'Product'}</strong></p>`;
-    } else if (order.items && Array.isArray(order.items)) {
-        html += '<ul class="list-unstyled">';
-        order.items.forEach(item => {
-            html += `<li class="mb-2">`;
-            html += `<strong>${item.name || item.product_name || 'Product'}</strong><br>`;
-            if (item.quantity) html += `<small class="text-muted">Quantity: ${item.quantity}</small><br>`;
-            if (item.price) html += `<small class="text-muted">Price: ₹${parseFloat(item.price).toFixed(2)}</small>`;
-            html += `</li>`;
-        });
-        html += '</ul>';
-    } else {
-        html += '<p class="text-muted">No product details available</p>';
+    html += '<table class="table table-sm table-borderless">';
+    html += `<tr><td width="40%"><strong>Product Name:</strong></td><td>${order.order_item_name || 'N/A'}</td></tr>`;
+    if (order.order_item_sku) {
+        html += `<tr><td><strong>SKU:</strong></td><td><span class="badge bg-secondary">${order.order_item_sku}</span></td></tr>`;
     }
+    html += `<tr><td><strong>Quantity:</strong></td><td>${order.order_item_units || 'N/A'}</td></tr>`;
+    html += '</table>';
     html += '</div>';
 
-    // Shipping Information
-    if (order.tracking_number || order.courier || order.awb || order.shipped_date) {
+    // Shipping/Package Information
+    if (order.length || order.breadth || order.height || order.weight) {
         html += '<div class="col-12 mb-3">';
-        html += '<h6 class="border-bottom pb-2"><i class="bi bi-truck me-2"></i>Shipping Information</h6>';
+        html += '<h6 class="border-bottom pb-2"><i class="bi bi-box-seam me-2"></i>Package Dimensions</h6>';
         html += '<table class="table table-sm table-borderless">';
-        if (order.awb || order.tracking_number || order.awb_number) {
-            html += `<tr><td width="20%"><strong>AWB/Tracking:</strong></td><td><span class="badge bg-info">${order.awb || order.tracking_number || order.awb_number}</span></td></tr>`;
-        }
-        if (order.courier || order.courier_name) {
-            html += `<tr><td><strong>Courier:</strong></td><td>${order.courier || order.courier_name}</td></tr>`;
-        }
-        if (order.shipped_date) {
-            html += `<tr><td><strong>Shipped Date:</strong></td><td>${order.shipped_date}</td></tr>`;
-        }
-        if (order.expected_delivery || order.delivery_date) {
-            html += `<tr><td><strong>Expected Delivery:</strong></td><td>${order.expected_delivery || order.delivery_date}</td></tr>`;
-        }
+        html += '<tr>';
+        if (order.length) html += `<td><strong>Length:</strong> ${order.length} cm</td>`;
+        if (order.breadth) html += `<td><strong>Breadth:</strong> ${order.breadth} cm</td>`;
+        if (order.height) html += `<td><strong>Height:</strong> ${order.height} cm</td>`;
+        if (order.weight) html += `<td><strong>Weight:</strong> ${order.weight} kg</td>`;
+        html += '</tr>';
         html += '</table>';
         html += '</div>';
     }
+
+    // Action Flags
+    html += '<div class="col-12 mb-3">';
+    html += '<h6 class="border-bottom pb-2"><i class="bi bi-flag me-2"></i>Order Flags</h6>';
+    html += '<div class="d-flex gap-2">';
+    if (order.canBeCancelled) {
+        html += '<span class="badge bg-info">Can Be Cancelled</span>';
+    }
+    if (order.shipNowFlag) {
+        html += '<span class="badge bg-success">Ready to Ship</span>';
+    }
+    if (order.labelPinrtFlag) {
+        html += '<span class="badge bg-primary">Label Printable</span>';
+    }
+    if (order.new_label_pdf_url) {
+        html += `<a href="${order.new_label_pdf_url}" target="_blank" class="badge bg-warning text-decoration-none">View Label PDF</a>`;
+    }
+    html += '</div>';
+    html += '</div>';
 
     // Raw JSON Data
     html += '<div class="col-12">';

@@ -18,7 +18,7 @@
                                 <a href="{{ route('shipment-global.index') }}">Shipment Global</a>
                             </li>
                             <li class="breadcrumb-item active" aria-current="page">
-                                Order #{{ $order['order_id'] ?? $order['id'] ?? 'N/A' }}
+                                Order #{{ $order['id'] ?? 'N/A' }}
                             </li>
                         </ol>
                     </nav>
