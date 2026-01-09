@@ -228,55 +228,96 @@ function viewOrderDetails(order) {
 
     // Order Information
     html += '<div class="col-md-6 mb-3">';
-    html += '<h6 class="border-bottom pb-2">Order Information</h6>';
-    html += '<table class="table table-sm">';
-    html += `<tr><td><strong>Order ID:</strong></td><td>${order.order_id || order.id || 'N/A'}</td></tr>`;
-    html += `<tr><td><strong>Status:</strong></td><td><span class="badge bg-primary">${order.status || 'N/A'}</span></td></tr>`;
-    html += `<tr><td><strong>Amount:</strong></td><td>₹${parseFloat(order.amount || order.total || 0).toFixed(2)}</td></tr>`;
-    html += `<tr><td><strong>Date:</strong></td><td>${order.created_at || 'N/A'}</td></tr>`;
+    html += '<h6 class="border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>Order Information</h6>';
+    html += '<table class="table table-sm table-borderless">';
+    html += `<tr><td width="40%"><strong>Order ID:</strong></td><td><span class="text-primary">${order.order_id || order.id || order.order_number || 'N/A'}</span></td></tr>`;
+    html += `<tr><td><strong>AWB No.:</strong></td><td><strong>${order.awb || order.tracking_number || order.awb_number || '-'}</strong></td></tr>`;
+    html += `<tr><td><strong>Status:</strong></td><td><span class="badge bg-primary">${order.status || order.order_status || 'N/A'}</span></td></tr>`;
+    html += `<tr><td><strong>Created:</strong></td><td>${order.created_at || order.date || 'N/A'}</td></tr>`;
+    if (order.updated_at) {
+        html += `<tr><td><strong>Updated:</strong></td><td>${order.updated_at}</td></tr>`;
+    }
+    html += '</table>';
+    html += '</div>';
+
+    // Payment Information
+    html += '<div class="col-md-6 mb-3">';
+    html += '<h6 class="border-bottom pb-2"><i class="bi bi-cash me-2"></i>Payment Information</h6>';
+    html += '<table class="table table-sm table-borderless">';
+    html += `<tr><td width="40%"><strong>Amount:</strong></td><td><strong class="text-success">₹${parseFloat(order.amount || order.total || order.total_amount || 0).toFixed(2)}</strong></td></tr>`;
+    if (order.payment_method) {
+        html += `<tr><td><strong>Method:</strong></td><td>${order.payment_method}</td></tr>`;
+    }
+    if (order.payment_status) {
+        const paymentBadge = order.payment_status.toLowerCase() === 'paid' ? 'bg-success' : 'bg-warning';
+        html += `<tr><td><strong>Status:</strong></td><td><span class="badge ${paymentBadge}">${order.payment_status}</span></td></tr>`;
+    }
     html += '</table>';
     html += '</div>';
 
     // Customer Information
     html += '<div class="col-md-6 mb-3">';
-    html += '<h6 class="border-bottom pb-2">Customer Information</h6>';
-    html += '<table class="table table-sm">';
-    html += `<tr><td><strong>Name:</strong></td><td>${order.customer_name || order.name || 'N/A'}</td></tr>`;
-    html += `<tr><td><strong>Phone:</strong></td><td>${order.customer_phone || order.phone || 'N/A'}</td></tr>`;
+    html += '<h6 class="border-bottom pb-2"><i class="bi bi-person me-2"></i>Customer Information</h6>';
+    html += '<table class="table table-sm table-borderless">';
+    html += `<tr><td width="40%"><strong>Name:</strong></td><td>${order.customer_name || order.name || order.buyer_name || 'N/A'}</td></tr>`;
+    html += `<tr><td><strong>Phone:</strong></td><td><i class="bi bi-telephone"></i> ${order.customer_phone || order.phone || order.mobile || 'N/A'}</td></tr>`;
     if (order.customer_email || order.email) {
-        html += `<tr><td><strong>Email:</strong></td><td>${order.customer_email || order.email}</td></tr>`;
+        html += `<tr><td><strong>Email:</strong></td><td><i class="bi bi-envelope"></i> ${order.customer_email || order.email}</td></tr>`;
+    }
+    if (order.customer_city || order.city) {
+        html += `<tr><td><strong>City:</strong></td><td><i class="bi bi-geo-alt"></i> ${order.customer_city || order.city}</td></tr>`;
     }
     if (order.customer_address || order.address) {
-        html += `<tr><td><strong>Address:</strong></td><td>${order.customer_address || order.address}</td></tr>`;
+        html += `<tr><td colspan="2"><strong>Address:</strong><br>${order.customer_address || order.address}</td></tr>`;
     }
     html += '</table>';
     html += '</div>';
 
+    // Product Details
+    html += '<div class="col-md-6 mb-3">';
+    html += '<h6 class="border-bottom pb-2"><i class="bi bi-box me-2"></i>Product Details</h6>';
+    if (order.product_name || order.products) {
+        html += `<p><strong>${order.product_name || 'Product'}</strong></p>`;
+    } else if (order.items && Array.isArray(order.items)) {
+        html += '<ul class="list-unstyled">';
+        order.items.forEach(item => {
+            html += `<li class="mb-2">`;
+            html += `<strong>${item.name || item.product_name || 'Product'}</strong><br>`;
+            if (item.quantity) html += `<small class="text-muted">Quantity: ${item.quantity}</small><br>`;
+            if (item.price) html += `<small class="text-muted">Price: ₹${parseFloat(item.price).toFixed(2)}</small>`;
+            html += `</li>`;
+        });
+        html += '</ul>';
+    } else {
+        html += '<p class="text-muted">No product details available</p>';
+    }
+    html += '</div>';
+
     // Shipping Information
-    if (order.tracking_number || order.courier || order.awb) {
+    if (order.tracking_number || order.courier || order.awb || order.shipped_date) {
         html += '<div class="col-12 mb-3">';
-        html += '<h6 class="border-bottom pb-2">Shipping Information</h6>';
-        html += '<table class="table table-sm">';
-        if (order.tracking_number || order.awb) {
-            html += `<tr><td><strong>Tracking Number:</strong></td><td>${order.tracking_number || order.awb || 'N/A'}</td></tr>`;
+        html += '<h6 class="border-bottom pb-2"><i class="bi bi-truck me-2"></i>Shipping Information</h6>';
+        html += '<table class="table table-sm table-borderless">';
+        if (order.awb || order.tracking_number || order.awb_number) {
+            html += `<tr><td width="20%"><strong>AWB/Tracking:</strong></td><td><span class="badge bg-info">${order.awb || order.tracking_number || order.awb_number}</span></td></tr>`;
         }
-        if (order.courier) {
-            html += `<tr><td><strong>Courier:</strong></td><td>${order.courier}</td></tr>`;
+        if (order.courier || order.courier_name) {
+            html += `<tr><td><strong>Courier:</strong></td><td>${order.courier || order.courier_name}</td></tr>`;
         }
         if (order.shipped_date) {
             html += `<tr><td><strong>Shipped Date:</strong></td><td>${order.shipped_date}</td></tr>`;
         }
-        if (order.expected_delivery) {
-            html += `<tr><td><strong>Expected Delivery:</strong></td><td>${order.expected_delivery}</td></tr>`;
+        if (order.expected_delivery || order.delivery_date) {
+            html += `<tr><td><strong>Expected Delivery:</strong></td><td>${order.expected_delivery || order.delivery_date}</td></tr>`;
         }
         html += '</table>';
         html += '</div>';
     }
 
-    // Additional Details
+    // Raw JSON Data
     html += '<div class="col-12">';
-    html += '<h6 class="border-bottom pb-2">Additional Details</h6>';
-    html += '<pre class="bg-light p-3 rounded"><code>' + JSON.stringify(order, null, 2) + '</code></pre>';
+    html += '<h6 class="border-bottom pb-2"><i class="bi bi-code-square me-2"></i>Complete Order Data (JSON)</h6>';
+    html += '<pre class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;"><code>' + JSON.stringify(order, null, 2) + '</code></pre>';
     html += '</div>';
 
     html += '</div>';
