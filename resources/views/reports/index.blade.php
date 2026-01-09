@@ -98,57 +98,6 @@
             </div>
         </div>
 
-        <!-- Inventory Reports -->
-        <div class="col-lg-6 col-xl-4 mb-4">
-            <div class="report-category-card">
-                <div class="report-category-header bg-gradient-success">
-                    <div class="d-flex align-items-center">
-                        <div class="report-category-icon">
-                            <i class="fas fa-boxes"></i>
-                        </div>
-                        <div>
-                            <h5 class="mb-0 text-white">Inventory Reports</h5>
-                            <small class="text-white-50">Stock levels, movements, and valuation</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="report-category-body">
-                    <div class="list-group list-group-flush">
-                        <a href="{{ route('reports.inventory') }}" class="list-group-item list-group-item-action">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <i class="fas fa-warehouse me-2 text-success"></i>
-                                    <strong>Current Inventory</strong>
-                                    <br><small class="text-muted">Current stock levels and availability</small>
-                                </div>
-                                <i class="fas fa-chevron-right text-muted"></i>
-                            </div>
-                        </a>
-                        <a href="{{ route('reports.inventory.valuation') }}" class="list-group-item list-group-item-action">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <i class="fas fa-calculator me-2 text-success"></i>
-                                    <strong>Inventory Valuation</strong>
-                                    <br><small class="text-muted">Stock value and cost analysis</small>
-                                </div>
-                                <i class="fas fa-chevron-right text-muted"></i>
-                            </div>
-                        </a>
-                        <a href="{{ route('reports.inventory.movement') }}" class="list-group-item list-group-item-action">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <i class="fas fa-exchange-alt me-2 text-success"></i>
-                                    <strong>Inventory Movement</strong>
-                                    <br><small class="text-muted">Stock in/out transactions and history</small>
-                                </div>
-                                <i class="fas fa-chevron-right text-muted"></i>
-                            </div>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Financial Reports -->
         <div class="col-lg-6 col-xl-4 mb-4">
             <div class="report-category-card">

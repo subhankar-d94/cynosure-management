@@ -109,55 +109,50 @@ use Illuminate\Support\Facades\Storage;
                 </div>
             </div>
 
-            <!-- Inventory Information -->
-            @if($product->inventory)
+            <!-- Stock Information -->
             <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header">
                     <h5 class="card-title mb-0">
-                        <i class="bi bi-boxes me-2"></i>Inventory Status
+                        <i class="bi bi-boxes me-2"></i>Stock Status
                     </h5>
-                    <a href="{{ route('inventory.show', $product->inventory) }}" class="btn btn-sm btn-outline-primary">
-                        View Details
-                    </a>
                 </div>
                 <div class="card-body">
                     <div class="row g-4">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="text-center">
-                                <h3 class="mb-1 {{ $product->inventory->quantity_in_stock <= $product->inventory->reorder_level ? 'text-warning' : 'text-success' }}">
-                                    {{ $product->inventory->quantity_in_stock }}
+                                <h3 class="mb-1 {{ $product->stock_quantity <= $product->reorder_level ? 'text-warning' : 'text-success' }}">
+                                    {{ $product->stock_quantity }}
                                 </h3>
                                 <small class="text-muted">Current Stock</small>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="text-center">
-                                <h3 class="mb-1 text-info">{{ $product->inventory->reorder_level }}</h3>
+                                <h3 class="mb-1 text-info">{{ $product->reorder_level }}</h3>
                                 <small class="text-muted">Reorder Level</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h3 class="mb-1 text-primary">₹{{ number_format($product->cost_per_unit ?? 0, 2) }}</h3>
+                                <small class="text-muted">Cost Per Unit</small>
                             </div>
                         </div>
                     </div>
 
-                    @if($product->inventory->quantity_in_stock <= $product->inventory->reorder_level)
+                    @if($product->stock_quantity <= $product->reorder_level && $product->stock_quantity > 0)
                     <div class="alert alert-warning mt-3 mb-0">
                         <i class="bi bi-exclamation-triangle me-2"></i>
                         <strong>Low Stock Alert:</strong> Current stock is at or below the reorder level.
                     </div>
+                    @elseif($product->stock_quantity == 0)
+                    <div class="alert alert-danger mt-3 mb-0">
+                        <i class="bi bi-x-circle me-2"></i>
+                        <strong>Out of Stock:</strong> This product is currently out of stock.
+                    </div>
                     @endif
                 </div>
             </div>
-            @else
-            <div class="card mb-4">
-                <div class="card-body text-center py-5">
-                    <i class="bi bi-box text-muted" style="font-size: 3rem;"></i>
-                    <h5 class="mt-3 text-muted">No Inventory Data</h5>
-                    <p class="text-muted">This product doesn't have inventory tracking set up.</p>
-                    <button class="btn btn-primary" onclick="setupInventory()">
-                        <i class="bi bi-plus-lg me-1"></i>Setup Inventory
-                    </button>
-                </div>
-            </div>
-            @endif
 
             <!-- Product Variants (for customizable products) -->
             @if($product->is_customizable)

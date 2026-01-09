@@ -218,7 +218,7 @@
                 <div class="stat-content">
                     <h3 class="stat-value">{{ number_format($stats['low_stock_items']) }}</h3>
                     <p class="stat-label">Low Stock Items</p>
-                    <a href="{{ route('inventory.index') }}" class="stat-link">Reorder <i class="fas fa-arrow-right"></i></a>
+                    <a href="{{ route('products.index', ['stock_status' => 'low_stock']) }}" class="stat-link">Reorder <i class="fas fa-arrow-right"></i></a>
                 </div>
             </div>
         </div>
@@ -308,7 +308,7 @@
                     <h5 class="data-title">
                         <i class="fas fa-exclamation-triangle me-2 text-warning"></i>Low Stock Alerts
                     </h5>
-                    <a href="{{ route('inventory.index') }}" class="btn btn-sm btn-outline-warning">
+                    <a href="{{ route('products.index', ['stock_status' => 'low_stock']) }}" class="btn btn-sm btn-outline-warning">
                         View All <i class="fas fa-arrow-right ms-1"></i>
                     </a>
                 </div>
