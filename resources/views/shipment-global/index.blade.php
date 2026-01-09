@@ -63,12 +63,13 @@
                     <table class="table table-hover align-middle" id="ordersTable">
                         <thead class="table-light">
                             <tr>
-                                <th>Order ID</th>
-                                <th>Customer</th>
+                                <th>AWB No.</th>
+                                <th>Creation Date</th>
+                                <th>ORDER ID</th>
+                                <th>PRODUCT DETAILS</th>
+                                <th>PAYMENT</th>
+                                <th>CUSTOMER DETAILS</th>
                                 <th>Status</th>
-                                <th>Amount</th>
-                                <th>Date</th>
-                                <th>Tracking</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -76,57 +77,99 @@
                             @foreach($orders as $order)
                             <tr>
                                 <td>
-                                    <strong class="text-primary">
-                                        {{ $order['order_id'] ?? $order['id'] ?? 'N/A' }}
+                                    @if(isset($order['awb']) || isset($order['tracking_number']) || isset($order['awb_number']))
+                                        <strong class="text-primary">
+                                            {{ $order['awb'] ?? $order['tracking_number'] ?? $order['awb_number'] ?? 'N/A' }}
+                                        </strong>
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <small>
+                                        {{ isset($order['created_at']) ? \Carbon\Carbon::parse($order['created_at'])->format('d M Y') : (isset($order['date']) ? \Carbon\Carbon::parse($order['date'])->format('d M Y') : 'N/A') }}
+                                        @if(isset($order['created_at']))
+                                            <br><span class="text-muted">{{ \Carbon\Carbon::parse($order['created_at'])->format('h:i A') }}</span>
+                                        @endif
+                                    </small>
+                                </td>
+                                <td>
+                                    <strong class="text-dark">
+                                        {{ $order['order_id'] ?? $order['id'] ?? $order['order_number'] ?? 'N/A' }}
                                     </strong>
                                 </td>
                                 <td>
+                                    <div style="max-width: 250px;">
+                                        @if(isset($order['product_name']) || isset($order['products']))
+                                            <strong>{{ $order['product_name'] ?? 'N/A' }}</strong>
+                                        @elseif(isset($order['items']) && is_array($order['items']))
+                                            @foreach($order['items'] as $index => $item)
+                                                @if($index < 2)
+                                                    <div class="mb-1">
+                                                        <small><strong>{{ $item['name'] ?? $item['product_name'] ?? 'Product' }}</strong></small>
+                                                        @if(isset($item['quantity']))
+                                                            <br><small class="text-muted">Qty: {{ $item['quantity'] }}</small>
+                                                        @endif
+                                                    </div>
+                                                @endif
+                                            @endforeach
+                                            @if(count($order['items']) > 2)
+                                                <small class="text-muted">+{{ count($order['items']) - 2 }} more</small>
+                                            @endif
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </div>
+                                </td>
+                                <td>
                                     <div>
-                                        <strong>{{ $order['customer_name'] ?? $order['name'] ?? 'N/A' }}</strong>
-                                        @if(isset($order['customer_phone']) || isset($order['phone']))
+                                        <strong class="text-success">
+                                            ₹{{ number_format($order['amount'] ?? $order['total'] ?? $order['total_amount'] ?? 0, 2) }}
+                                        </strong>
+                                        @if(isset($order['payment_method']))
+                                            <br><small class="text-muted">{{ ucfirst($order['payment_method']) }}</small>
+                                        @endif
+                                        @if(isset($order['payment_status']))
+                                            <br><span class="badge badge-sm {{ strtolower($order['payment_status']) == 'paid' ? 'bg-success' : 'bg-warning' }}">
+                                                {{ ucfirst($order['payment_status']) }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="max-width: 200px;">
+                                        <strong>{{ $order['customer_name'] ?? $order['name'] ?? $order['buyer_name'] ?? 'N/A' }}</strong>
+                                        @if(isset($order['customer_phone']) || isset($order['phone']) || isset($order['mobile']))
                                             <br><small class="text-muted">
-                                                <i class="bi bi-telephone"></i> {{ $order['customer_phone'] ?? $order['phone'] }}
+                                                <i class="bi bi-telephone"></i> {{ $order['customer_phone'] ?? $order['phone'] ?? $order['mobile'] }}
+                                            </small>
+                                        @endif
+                                        @if(isset($order['customer_city']) || isset($order['city']))
+                                            <br><small class="text-muted">
+                                                <i class="bi bi-geo-alt"></i> {{ $order['customer_city'] ?? $order['city'] }}
                                             </small>
                                         @endif
                                     </div>
                                 </td>
                                 <td>
                                     @php
-                                        $status = strtolower($order['status'] ?? 'pending');
+                                        $status = strtolower($order['status'] ?? $order['order_status'] ?? 'pending');
                                         $badgeClass = match($status) {
                                             'delivered' => 'bg-success',
-                                            'shipped', 'in_transit' => 'bg-info',
-                                            'processing' => 'bg-warning',
+                                            'shipped', 'in_transit', 'in transit' => 'bg-info',
+                                            'processing', 'confirmed' => 'bg-warning',
                                             'cancelled', 'failed' => 'bg-danger',
+                                            'pending' => 'bg-secondary',
                                             default => 'bg-secondary'
                                         };
                                     @endphp
                                     <span class="badge {{ $badgeClass }}">
-                                        {{ ucfirst($order['status'] ?? 'Pending') }}
+                                        {{ ucfirst($order['status'] ?? $order['order_status'] ?? 'Pending') }}
                                     </span>
                                 </td>
                                 <td>
-                                    <strong class="text-success">
-                                        ₹{{ number_format($order['amount'] ?? $order['total'] ?? 0, 2) }}
-                                    </strong>
-                                </td>
-                                <td>
-                                    <small>
-                                        {{ isset($order['created_at']) ? \Carbon\Carbon::parse($order['created_at'])->format('d M Y, h:i A') : 'N/A' }}
-                                    </small>
-                                </td>
-                                <td>
-                                    @if(isset($order['tracking_number']) && $order['tracking_number'])
-                                        <span class="badge bg-info">
-                                            <i class="bi bi-box-seam"></i> {{ $order['tracking_number'] }}
-                                        </span>
-                                    @else
-                                        <span class="text-muted">-</span>
-                                    @endif
-                                </td>
-                                <td>
                                     <div class="btn-group btn-group-sm">
-                                        <button type="button" class="btn btn-outline-primary"
+                                        <button type="button" class="btn btn-outline-primary" title="View Details"
                                                 onclick="viewOrderDetails({{ json_encode($order) }})">
                                             <i class="bi bi-eye"></i>
                                         </button>
@@ -246,13 +289,16 @@ function viewOrderDetails(order) {
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof $.fn.DataTable !== 'undefined' && document.getElementById('ordersTable')) {
         $('#ordersTable').DataTable({
-            order: [[4, 'desc']], // Sort by date column
+            order: [[1, 'desc']], // Sort by Creation Date column
             pageLength: 25,
             responsive: true,
             language: {
                 search: "Search orders:",
                 lengthMenu: "Show _MENU_ orders per page"
-            }
+            },
+            columnDefs: [
+                { orderable: false, targets: 7 } // Disable sorting on Actions column
+            ]
         });
     }
 });
