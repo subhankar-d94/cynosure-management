@@ -167,59 +167,13 @@ use Illuminate\Support\Facades\Storage;
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
-                            <div class="col-md-3">
+                            <div class="col-md-12">
                                 <label for="stock_quantity" class="form-label">Current Stock Quantity *</label>
                                 <input type="number" class="form-control @error('stock_quantity') is-invalid @enderror"
                                        id="stock_quantity" name="stock_quantity"
                                        value="{{ old('stock_quantity', $product->stock_quantity) }}" min="0" required>
                                 <div class="form-text">Available quantity in stock</div>
                                 @error('stock_quantity')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="col-md-3">
-                                <label for="reorder_level" class="form-label">Reorder Level *</label>
-                                <input type="number" class="form-control @error('reorder_level') is-invalid @enderror"
-                                       id="reorder_level" name="reorder_level"
-                                       value="{{ old('reorder_level', $product->reorder_level) }}" min="0" required>
-                                <div class="form-text">Alert when stock reaches this level</div>
-                                @error('reorder_level')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="col-md-3">
-                                <label for="cost_per_unit" class="form-label">Cost per Unit (₹)</label>
-                                <input type="number" class="form-control @error('cost_per_unit') is-invalid @enderror"
-                                       id="cost_per_unit" name="cost_per_unit"
-                                       value="{{ old('cost_per_unit', $product->cost_per_unit) }}" step="0.01" min="0">
-                                <div class="form-text">Purchase cost per unit</div>
-                                @error('cost_per_unit')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="col-md-3">
-                                <label class="form-label">Stock Value</label>
-                                <input type="text" class="form-control" id="stock_value"
-                                       value="₹{{ number_format($product->stock_value, 2) }}" readonly>
-                                <div class="form-text">Calculated automatically</div>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label for="supplier_id" class="form-label">Primary Supplier</label>
-                                <select class="form-select @error('supplier_id') is-invalid @enderror" id="supplier_id" name="supplier_id">
-                                    <option value="">Select Supplier</option>
-                                    @foreach($suppliers ?? [] as $supplier)
-                                        <option value="{{ $supplier->id }}"
-                                            {{ old('supplier_id', $product->supplier_id) == $supplier->id ? 'selected' : '' }}>
-                                            {{ $supplier->company_name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                <div class="form-text">Primary supplier for this product</div>
-                                @error('supplier_id')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>

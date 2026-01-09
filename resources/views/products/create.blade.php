@@ -140,25 +140,23 @@
                     </div>
                 </div>
 
-                <!-- Inventory Information -->
+                <!-- Stock Management -->
                 <div class="card mb-4">
                     <div class="card-header">
                         <h5 class="card-title mb-0">
-                            <i class="bi bi-boxes me-2"></i>Inventory Settings
+                            <i class="bi bi-boxes me-2"></i>Stock Management
                         </h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
-                            <div class="col-md-4">
-                                <label for="initial_stock" class="form-label">Initial Stock Quantity</label>
-                                <input type="number" class="form-control" id="initial_stock" name="initial_stock" min="0" value="0">
-                                <div class="form-text">Starting inventory count</div>
-                            </div>
-
-                            <div class="col-md-4">
-                                <label for="reorder_level" class="form-label">Reorder Level</label>
-                                <input type="number" class="form-control" id="reorder_level" name="reorder_level" min="0" value="1">
-                                <div class="form-text">Alert when stock reaches this level</div>
+                            <div class="col-md-12">
+                                <label for="stock_quantity" class="form-label">Current Stock Quantity *</label>
+                                <input type="number" class="form-control @error('stock_quantity') is-invalid @enderror"
+                                       id="stock_quantity" name="stock_quantity" min="0" value="{{ old('stock_quantity', 0) }}" required>
+                                <div class="form-text">Available quantity in stock</div>
+                                @error('stock_quantity')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
                     </div>

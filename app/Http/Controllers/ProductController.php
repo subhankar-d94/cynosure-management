@@ -94,10 +94,7 @@ class ProductController extends Controller
             'dimensions.height' => 'nullable|numeric|min:0',
             'is_customizable' => 'boolean',
             'sku' => 'nullable|string|max:50|unique:products,sku',
-            'initial_stock' => 'nullable|integer|min:0',
-            'reorder_level' => 'nullable|integer|min:0',
-            'cost_per_unit' => 'nullable|numeric|min:0',
-            'supplier_id' => 'nullable|exists:suppliers,id',
+            'stock_quantity' => 'required|integer|min:0',
             'product_images' => 'nullable|array',
             'product_images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
@@ -121,10 +118,10 @@ class ProductController extends Controller
                 'dimensions' => $request->dimensions,
                 'is_customizable' => $request->boolean('is_customizable'),
                 'sku' => $request->sku ?: null, // Let model auto-generate if empty
-                'stock_quantity' => $request->input('initial_stock', 0),
-                'reorder_level' => $request->input('reorder_level', 10),
-                'cost_per_unit' => $request->input('cost_per_unit'),
-                'supplier_id' => $request->supplier_id
+                'stock_quantity' => $request->input('stock_quantity', 0),
+                'reorder_level' => 10, // Default reorder level
+                'cost_per_unit' => null,
+                'supplier_id' => null
             ]);
 
             // Handle image uploads
@@ -203,6 +200,7 @@ class ProductController extends Controller
             'dimensions.height' => 'nullable|numeric|min:0',
             'is_customizable' => 'boolean',
             'sku' => 'nullable|string|max:50|unique:products,sku,' . $product->id,
+            'stock_quantity' => 'required|integer|min:0',
             'product_images' => 'nullable|array',
             'product_images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
             'images_to_remove' => 'nullable|array',
@@ -226,6 +224,7 @@ class ProductController extends Controller
                 'weight' => $request->weight,
                 'dimensions' => $request->dimensions,
                 'is_customizable' => $request->boolean('is_customizable'),
+                'stock_quantity' => $request->input('stock_quantity'),
             ];
 
             // Handle SKU update
@@ -523,18 +522,12 @@ class ProductController extends Controller
                         'description' => $data['description'] ?? null,
                         'base_price' => $data['base_price'] ?? 0,
                         'weight' => $data['weight'] ?? null,
-                        'is_customizable' => filter_var($data['is_customizable'] ?? false, FILTER_VALIDATE_BOOLEAN)
+                        'is_customizable' => filter_var($data['is_customizable'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                        'stock_quantity' => $data['initial_stock'] ?? 0,
+                        'reorder_level' => $data['reorder_level'] ?? 10,
+                        'cost_per_unit' => $data['cost_per_unit'] ?? null,
+                        'supplier_id' => $data['supplier_id'] ?? null
                     ]);
-
-                    // Create inventory if stock data provided
-                    if (isset($data['initial_stock']) && $data['initial_stock'] > 0) {
-                        Inventory::create([
-                            'product_id' => $product->id,
-                            'quantity_in_stock' => $data['initial_stock'],
-                            'reorder_level' => $data['reorder_level'] ?? 10,
-                            'cost_per_unit' => $data['cost_per_unit'] ?? $product->base_price
-                        ]);
-                    }
 
                     $imported++;
 
