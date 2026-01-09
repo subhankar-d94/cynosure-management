@@ -383,7 +383,7 @@ class ProductController extends Controller
 
     public function getData(Request $request): JsonResponse
     {
-        $query = Product::with(['category', 'inventory']);
+        $query = Product::with(['category', 'supplier']);
 
         // Apply filters
         if ($request->has('category_id') && $request->category_id) {

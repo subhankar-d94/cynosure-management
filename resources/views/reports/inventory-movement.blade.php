@@ -100,13 +100,13 @@
 
                     <div class="mt-4">
                         <p class="text-muted mb-3">
-                            In the meantime, you can view individual product movement history from the
-                            <a href="{{ route('inventory.index') }}" class="text-primary">Inventory Management</a> section.
+                            In the meantime, you can view current stock levels from the
+                            <a href="{{ route('products.index') }}" class="text-primary">Products</a> section.
                         </p>
 
                         <div class="d-flex justify-content-center gap-2">
-                            <a href="{{ route('inventory.index') }}" class="btn btn-primary">
-                                <i class="fas fa-boxes"></i> View Inventory
+                            <a href="{{ route('products.index') }}" class="btn btn-primary">
+                                <i class="fas fa-boxes"></i> View Products
                             </a>
                             <a href="{{ route('reports.inventory') }}" class="btn btn-outline-primary">
                                 <i class="fas fa-warehouse"></i> Current Stock Report

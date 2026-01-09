@@ -131,37 +131,37 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($inventoryData as $inventory)
-                            <tr data-product="{{ strtolower($inventory->product->name ?? '') }}"
-                                data-sku="{{ strtolower($inventory->product->sku ?? '') }}"
-                                data-supplier="{{ strtolower($inventory->supplier->company_name ?? '') }}"
-                                data-stock="{{ $inventory->quantity_in_stock }}">
+                            @forelse($inventoryData as $product)
+                            <tr data-product="{{ strtolower($product->name ?? '') }}"
+                                data-sku="{{ strtolower($product->sku ?? '') }}"
+                                data-supplier="{{ strtolower($product->supplier->company_name ?? '') }}"
+                                data-stock="{{ $product->stock_quantity }}">
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <div class="product-icon me-2">
                                             <i class="fas fa-box"></i>
                                         </div>
                                         <div>
-                                            <strong>{{ $inventory->product->name ?? 'N/A' }}</strong>
-                                            <br><small class="text-muted">{{ $inventory->product->category->name ?? 'No Category' }}</small>
+                                            <strong>{{ $product->name ?? 'N/A' }}</strong>
+                                            <br><small class="text-muted">{{ $product->category->name ?? 'No Category' }}</small>
                                         </div>
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="badge bg-secondary">{{ $inventory->product->sku ?? 'N/A' }}</span>
+                                    <span class="badge bg-secondary">{{ $product->sku ?? 'N/A' }}</span>
                                 </td>
                                 <td>
-                                    <span class="fw-bold {{ $inventory->quantity_in_stock <= 0 ? 'text-danger' : ($inventory->quantity_in_stock <= $inventory->reorder_level ? 'text-warning' : 'text-success') }}">
-                                        {{ number_format($inventory->quantity_in_stock) }}
+                                    <span class="fw-bold {{ $product->stock_quantity <= 0 ? 'text-danger' : ($product->stock_quantity <= $product->reorder_level ? 'text-warning' : 'text-success') }}">
+                                        {{ number_format($product->stock_quantity) }}
                                     </span>
                                 </td>
-                                <td>{{ number_format($inventory->reorder_level) }}</td>
-                                <td>{{ $inventory->supplier->company_name ?? 'N/A' }}</td>
-                                <td>{{ $inventory->updated_at->format('d/m/Y H:i') }}</td>
+                                <td>{{ number_format($product->reorder_level) }}</td>
+                                <td>{{ $product->supplier->company_name ?? 'N/A' }}</td>
+                                <td>{{ $product->updated_at->format('d/m/Y H:i') }}</td>
                                 <td>
-                                    @if($inventory->quantity_in_stock <= 0)
+                                    @if($product->stock_quantity <= 0)
                                         <span class="badge bg-danger">Out of Stock</span>
-                                    @elseif($inventory->quantity_in_stock <= $inventory->reorder_level)
+                                    @elseif($product->stock_quantity <= $product->reorder_level)
                                         <span class="badge bg-warning">Low Stock</span>
                                     @else
                                         <span class="badge bg-success">In Stock</span>
@@ -169,10 +169,10 @@
                                 </td>
                                 <td>
                                     <div class="btn-group" role="group">
-                                        <a href="{{ route('inventory.show', $inventory) }}" class="btn btn-sm btn-outline-primary">
+                                        <a href="{{ route('products.show', $product) }}" class="btn btn-sm btn-outline-primary">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        <a href="{{ route('inventory.edit', $inventory) }}" class="btn btn-sm btn-outline-secondary">
+                                        <a href="{{ route('products.edit', $product) }}" class="btn btn-sm btn-outline-secondary">
                                             <i class="fas fa-edit"></i>
                                         </a>
                                     </div>

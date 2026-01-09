@@ -432,11 +432,11 @@ $(document).ready(function() {
                         <td>${product.name}</td>
                         <td>${product.sku}</td>
                         <td>$${parseFloat(product.base_price).toFixed(2)}</td>
-                        <td>${product.inventory.quantity_in_stock}</td>
+                        <td>${product.stock_quantity || 0}</td>
                         <td>
                             <button type="button" class="btn btn-sm btn-primary select-product"
                                     data-id="${product.id}" data-name="${product.name}"
-                                    data-price="${product.base_price}" data-stock="${product.inventory.quantity_in_stock}">
+                                    data-price="${product.base_price}" data-stock="${product.stock_quantity || 0}">
                                 Select
                             </button>
                         </td>

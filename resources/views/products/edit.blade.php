@@ -158,98 +158,74 @@ use Illuminate\Support\Facades\Storage;
                     </div>
                 </div>
 
-                <!-- Inventory Information -->
-                @if($product->inventory)
-                <div class="card mb-4">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-boxes me-2"></i>Inventory Settings
-                        </h5>
-                        <a href="{{ route('inventory.show', $product->inventory) }}" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-eye me-1"></i>View Inventory Details
-                        </a>
-                    </div>
-                    <div class="card-body">
-                        <div class="alert alert-info">
-                            <i class="bi bi-info-circle me-2"></i>
-                            <strong>Note:</strong> Inventory quantities should be adjusted through the Inventory Management section.
-                            Only settings can be modified here.
-                        </div>
-
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <label class="form-label">Current Stock</label>
-                                <input type="text" class="form-control" value="{{ $product->inventory->quantity_in_stock }}" readonly>
-                                <div class="form-text">Use inventory adjustment to change stock levels</div>
-                            </div>
-
-                            <div class="col-md-4">
-                                <label for="reorder_level" class="form-label">Reorder Level</label>
-                                <input type="number" class="form-control" id="reorder_level" name="reorder_level"
-                                       value="{{ old('reorder_level', $product->inventory->reorder_level) }}" min="0">
-                                <div class="form-text">Alert when stock reaches this level</div>
-                            </div>
-
-
-                            <div class="col-md-6">
-                                <label class="form-label">Stock Value</label>
-                                <input type="text" class="form-control" id="stock_value" readonly>
-                                <div class="form-text">Calculated automatically</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                @else
+                <!-- Stock Management -->
                 <div class="card mb-4">
                     <div class="card-header">
                         <h5 class="card-title mb-0">
-                            <i class="bi bi-boxes me-2"></i>Setup Inventory Tracking
+                            <i class="bi bi-boxes me-2"></i>Stock Management
                         </h5>
                     </div>
                     <div class="card-body">
-                        <div class="alert alert-warning">
-                            <i class="bi bi-exclamation-triangle me-2"></i>
-                            This product doesn't have inventory tracking enabled. You can set it up below.
-                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label for="stock_quantity" class="form-label">Current Stock Quantity *</label>
+                                <input type="number" class="form-control @error('stock_quantity') is-invalid @enderror"
+                                       id="stock_quantity" name="stock_quantity"
+                                       value="{{ old('stock_quantity', $product->stock_quantity) }}" min="0" required>
+                                <div class="form-text">Available quantity in stock</div>
+                                @error('stock_quantity')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="enable_inventory" name="enable_inventory" value="1">
-                            <label class="form-check-label" for="enable_inventory">
-                                Enable inventory tracking for this product
-                            </label>
-                        </div>
+                            <div class="col-md-3">
+                                <label for="reorder_level" class="form-label">Reorder Level *</label>
+                                <input type="number" class="form-control @error('reorder_level') is-invalid @enderror"
+                                       id="reorder_level" name="reorder_level"
+                                       value="{{ old('reorder_level', $product->reorder_level) }}" min="0" required>
+                                <div class="form-text">Alert when stock reaches this level</div>
+                                @error('reorder_level')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                        <div id="inventoryFields" style="display: none;">
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label for="initial_stock" class="form-label">Initial Stock Quantity</label>
-                                    <input type="number" class="form-control" id="initial_stock" name="initial_stock" min="0" value="0">
-                                </div>
+                            <div class="col-md-3">
+                                <label for="cost_per_unit" class="form-label">Cost per Unit (₹)</label>
+                                <input type="number" class="form-control @error('cost_per_unit') is-invalid @enderror"
+                                       id="cost_per_unit" name="cost_per_unit"
+                                       value="{{ old('cost_per_unit', $product->cost_per_unit) }}" step="0.01" min="0">
+                                <div class="form-text">Purchase cost per unit</div>
+                                @error('cost_per_unit')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                                <div class="col-md-4">
-                                    <label for="reorder_level" class="form-label">Reorder Level</label>
-                                    <input type="number" class="form-control" name="reorder_level" min="0" value="10">
-                                </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Stock Value</label>
+                                <input type="text" class="form-control" id="stock_value"
+                                       value="₹{{ number_format($product->stock_value, 2) }}" readonly>
+                                <div class="form-text">Calculated automatically</div>
+                            </div>
 
-                                <div class="col-md-4">
-                                    <label for="cost_per_unit" class="form-label">Cost per Unit (₹)</label>
-                                    <input type="number" class="form-control" name="cost_per_unit" step="0.01" min="0">
-                                </div>
-
-                                <div class="col-md-6">
-                                    <label for="supplier_id" class="form-label">Primary Supplier</label>
-                                    <select class="form-select" name="supplier_id">
-                                        <option value="">Select Supplier</option>
-                                        @foreach($suppliers as $supplier)
-                                            <option value="{{ $supplier->id }}">{{ $supplier->company_name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
+                            <div class="col-md-6">
+                                <label for="supplier_id" class="form-label">Primary Supplier</label>
+                                <select class="form-select @error('supplier_id') is-invalid @enderror" id="supplier_id" name="supplier_id">
+                                    <option value="">Select Supplier</option>
+                                    @foreach($suppliers ?? [] as $supplier)
+                                        <option value="{{ $supplier->id }}"
+                                            {{ old('supplier_id', $product->supplier_id) == $supplier->id ? 'selected' : '' }}>
+                                            {{ $supplier->company_name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <div class="form-text">Primary supplier for this product</div>
+                                @error('supplier_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
                     </div>
                 </div>
-                @endif
             </div>
 
             <!-- Sidebar -->
