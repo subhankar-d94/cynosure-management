@@ -254,6 +254,12 @@
                     </a>
                 </li>
 
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('shipment-global*') ? 'active' : '' }}" href="{{ route('shipment-global.index') }}">
+                        <i class="bi bi-globe"></i>Shipment Global
+                    </a>
+                </li>
+
                 {{-- <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('shipments*') ? 'active' : '' }}" href="{{ route('shipments.index') }}">
                         <i class="bi bi-truck"></i>Shipments

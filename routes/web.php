@@ -8,6 +8,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ShipmentController;
+use App\Http\Controllers\ShipmentGlobalController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\PurchaseItemUsageController;
@@ -174,6 +175,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/{invoice}/mark-sent', [InvoiceController::class, 'markSent'])->name('mark-sent');
         Route::get('/{invoice}/print', [InvoiceController::class, 'print'])->name('print');
         Route::post('/bulk-send', [InvoiceController::class, 'bulkSend'])->name('bulk-send');
+    });
+
+    // Shipment Global Routes
+    Route::prefix('shipment-global')->name('shipment-global.')->group(function () {
+        Route::get('/', [ShipmentGlobalController::class, 'index'])->name('index');
+        Route::get('/{orderId}', [ShipmentGlobalController::class, 'show'])->name('show');
+        Route::post('/refresh', [ShipmentGlobalController::class, 'refresh'])->name('refresh');
     });
 
     // Shipment Routes
